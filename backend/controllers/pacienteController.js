@@ -1,36 +1,76 @@
-const db = require('../config/db');
+const PacienteModel = require('../models/pacienteModel');
 
-// Obtener paciente por Cédula (Consulta Ciudadana)
-exports.obtenerPacientePorCedula = async (req, res) => {
-  const { cedula } = req.params;
-  try {
-    const [paciente] = await db.query('SELECT * FROM pacientes WHERE cedula = ?', [cedula]);
-    if (paciente.length === 0) {
-      return res.status(404).json({ mensaje: 'Ciudadano no encontrado' });
+const pacienteController = {
+  async consultarPorCedula(req, res) {
+    try {
+      const { cedula } = req.params;
+      if (!cedula) {
+        return res.status(400).json({ ok: false, mensaje: 'La cédula es obligatoria' });
+      }
+
+      const paciente = await PacienteModel.buscarPorCedula(cedula.trim());
+      if (!paciente) {
+        return res.status(404).json({ ok: false, mensaje: 'Ciudadano no encontrado en el registro' });
+      }
+
+      const vacunas = await PacienteModel.obtenerVacunasPorPacienteId(paciente.id);
+
+      return res.status(200).json({
+        ok: true,
+        paciente,
+        vacunas
+      });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        mensaje: 'Error interno al consultar paciente',
+        error: error.message
+      });
     }
-    
-    // Obtener vacunas registradas
-    const [vacunas] = await db.query('SELECT * FROM vacunas_aplicadas WHERE paciente_id = ?', [paciente[0].id]);
-    
-    res.json({
-      paciente: paciente[0],
-      vacunas: vacunas
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al consultar la base de datos', detalles: error.message });
+  },
+
+  async registrarPaciente(req, res) {
+    try {
+      const { cedula, nombres, apellidos, fecha_nacimiento, correo, telefono, ubicacion } = req.body;
+
+      if (!cedula || !nombres || !apellidos) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: 'Cédula, nombres y apellidos son requeridos'
+        });
+      }
+
+      const existente = await PacienteModel.buscarPorCedula(cedula.trim());
+      if (existente) {
+        return res.status(409).json({
+          ok: false,
+          mensaje: 'Ya existe un ciudadano registrado con esa cédula'
+        });
+      }
+
+      const nuevoId = await PacienteModel.crear({
+        cedula: cedula.trim(),
+        nombres: nombres.trim(),
+        apellidos: apellidos.trim(),
+        fecha_nacimiento,
+        correo,
+        telefono,
+        ubicacion
+      });
+
+      return res.status(201).json({
+        ok: true,
+        mensaje: 'Ciudadano registrado con éxito',
+        id: nuevoId
+      });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        mensaje: 'Error al registrar ciudadano',
+        error: error.message
+      });
+    }
   }
 };
 
-// Registrar nuevo Paciente / Ciudadano
-exports.registrarPaciente = async (req, res) => {
-  const { cedula, nombres, apellidos, fecha_nacimiento, correo, telefono } = req.body;
-  try {
-    const [resultado] = await db.query(
-      'INSERT INTO pacientes (cedula, nombres, apellidos, fecha_nacimiento, correo, telefono) VALUES (?, ?, ?, ?, ?, ?)',
-      [cedula, nombres, apellidos, fecha_nacimiento, correo, telefono]
-    );
-    res.status(201).json({ mensaje: 'Ciudadano registrado con éxito', id: resultado.insertId });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al registrar ciudadano', detalles: error.message });
-  }
-};
+module.exports = pacienteController;
