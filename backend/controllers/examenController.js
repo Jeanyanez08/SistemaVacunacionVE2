@@ -2,6 +2,19 @@ const ExamenModel = require('../models/examenModel');
 const PacienteModel = require('../models/pacienteModel');
 
 const examenController = {
+  async listarExamenes(req, res) {
+    try {
+      const examenes = await ExamenModel.listarTodos();
+      return res.status(200).json({ ok: true, data: examenes });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        mensaje: 'Error al listar exámenes',
+        error: error.message
+      });
+    }
+  },
+
   async anexarExamen(req, res) {
     try {
       const { cedula, tipo_examen, archivo_url, observacion } = req.body;
@@ -71,6 +84,25 @@ const examenController = {
       return res.status(500).json({
         ok: false,
         mensaje: 'Error al procesar el dictamen de Subregión',
+        error: error.message
+      });
+    }
+  },
+
+  async eliminarExamen(req, res) {
+    try {
+      const { id } = req.params;
+      const eliminados = await ExamenModel.eliminar(id);
+
+      if (eliminados === 0) {
+        return res.status(404).json({ ok: false, mensaje: 'Examen no encontrado' });
+      }
+
+      return res.status(200).json({ ok: true, mensaje: 'Examen eliminado con éxito' });
+    } catch (error) {
+      return res.status(500).json({
+        ok: false,
+        mensaje: 'Error al eliminar examen',
         error: error.message
       });
     }

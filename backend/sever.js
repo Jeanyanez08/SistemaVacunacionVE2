@@ -11,7 +11,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Rutas base del API MVC
 app.use('/api/pacientes', pacienteRoutes);
 app.use('/api/vacunas', vacunaRoutes);
 app.use('/api/examenes', examenRoutes);
