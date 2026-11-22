@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <!-- Estilos Globales -->
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/responsive.css">
   <style>
     /* Estética Profesional y Fondo Inmersivo para el Login */
     body.login-body {
@@ -153,11 +154,11 @@
 
       // Redirección exacta según el perfil seleccionado
       if (perfil === '1') {
-        window.location.href = 'admin/dashboard.html';
+        window.location.href = 'view/admin/dashboard.html';
       } else if (perfil === '2') {
-        window.location.href = 'centro_salud/registro_vacunas.html';
+        window.location.href = 'view/centro_salud/registro_vacunas.html';
       } else if (perfil === '3') {
-        window.location.href = 'subregion/procesar_solicitud.html';
+        window.location.href = 'view/subregion/procesar_solicitud.html';
       }
     }
   </script>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centro de Salud · Registro Operativo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link rel="stylesheet" href="../../css/styles.css">
+  <link rel="stylesheet" href="../../css/responsive.css">
+</head>
+<body>
+  <nav class="navbar navbar-dark navbar-institucional">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="#">
+        <i class="fa-solid fa-hospital-user fa-2x me-3 text-info"></i>
+        <div>
+          <span class="brand-text">CENTRO DE SALUD OPERATIVO</span>
+          <small class="brand-subtext">Perfil 2 · Registro Diario de Inmunización y Exámenes</small>
+        </div>
+      </a>
+      <div class="d-flex gap-2">
+        <a href="buscar_personas.html" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-search me-1"></i>Buscador</a>
+        <a href="../../login.html" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-power-off me-1"></i>Salir</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container my-5" id="root-centro"></main>
+
+  <footer>República Bolivariana de Venezuela · Sistema Nacional de Vacunación © 2026</footer>
+
+  <!-- React & Babel CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+    const API_URL = 'http://localhost:5000/api';
+
+    function CentroApp() {
+      const [tab, setTab] = useState('persona');
+      const [msg, setMsg] = useState('');
+      const [err, setErr] = useState('');
+
+      // Estado 1. Registrar Persona
+      const [cedulaPersona, setCedulaPersona] = useState('');
+      const [nombres, setNombres] = useState('');
+      const [apellidos, setApellidos] = useState('');
+      const [fechaNacimiento, setFechaNacimiento] = useState('');
+      const [correo, setCorreo] = useState('');
+      const [telefono, setTelefono] = useState('');
+      const [ubicacion, setUbicacion] = useState('San Juan de los Morros');
+
+      // Estado 2. Cargar Vacuna
+      const [cedulaVacuna, setCedulaVacuna] = useState('');
+      const [vacuna, setVacuna] = useState('BCG');
+      const [lote, setLote] = useState('');
+      const [fechaAplicacion, setFechaAplicacion] = useState(new Date().toISOString().slice(0, 10));
+      const [centroSalud, setCentroSalud] = useState('Hospital Dr. Israel Ranuárez Balza');
+
+      // Estado 3. Exámenes Externos para Informe
+      const [cedulaExamen, setCedulaExamen] = useState('');
+      const [tipoExamen, setTipoExamen] = useState('Serología de Anticuerpos');
+      const [archivoNombre, setArchivoNombre] = useState('');
+      const [observacion, setObservacion] = useState('');
+
+      const limpiarMensajes = () => {
+        setMsg('');
+        setErr('');
+      };
+
+      const handleRegistrarPersona = async (e) => {
+        e.preventDefault();
+        limpiarMensajes();
+        try {
+          const res = await fetch(`${API_URL}/pacientes/registrar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cedula: cedulaPersona.trim(),
+              nombres: nombres.trim(),
+              apellidos: apellidos.trim(),
+              fecha_nacimiento: fechaNacimiento,
+              correo: correo.trim(),
+              telefono: telefono.trim(),
+              ubicacion: ubicacion.trim()
+            })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            setErr(data.mensaje || 'No se pudo registrar el ciudadano.');
+            return;
+          }
+          setMsg(data.mensaje || 'Ciudadano registrado con éxito en el sistema');
+          setCedulaPersona('');
+          setNombres('');
+          setApellidos('');
+          setFechaNacimiento('');
+          setCorreo('');
+          setTelefono('');
+        } catch {
+          setErr('No se pudo conectar con el servidor en http://localhost:5000.');
+        }
+      };
+
+      const handleRegistrarVacuna = async (e) => {
+        e.preventDefault();
+        limpiarMensajes();
+        try {
+          const res = await fetch(`${API_URL}/vacunas/registrar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cedula: cedulaVacuna.trim(),
+              vacuna,
+              lote: lote.trim(),
+              fecha_aplicacion: fechaAplicacion,
+              centro_salud: centroSalud.trim()
+            })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            setErr(data.mensaje || 'No se pudo registrar la vacuna.');
+            return;
+          }
+          setMsg(data.mensaje || 'Dosis de vacuna registrada y enlazada al paciente');
+          setCedulaVacuna('');
+          setLote('');
+        } catch {
+          setErr('No se pudo conectar con el servidor en http://localhost:5000.');
+        }
+      };
+
+      const handleAnexarExamen = async (e) => {
+        e.preventDefault();
+        limpiarMensajes();
+        try {
+          const res = await fetch(`${API_URL}/examenes/anexar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cedula: cedulaExamen.trim(),
+              tipo_examen: tipoExamen,
+              archivo_url: archivoNombre || 'documento_adjunto',
+              observacion: observacion.trim() || `Documento adjunto: ${archivoNombre || 'soporte clínico'}`
+            })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.ok) {
+            setErr(data.mensaje || 'No se pudo anexar el examen.');
+            return;
+          }
+          setMsg(data.mensaje || 'Examen externo anexado para revisión y validación de la Subregión');
+          setCedulaExamen('');
+          setArchivoNombre('');
+          setObservacion('');
+        } catch {
+          setErr('No se pudo conectar con el servidor en http://localhost:5000.');
+        }
+      };
+
+      return (
+        <div>
+          {msg && <div className="alert alert-success alert-dismissible fade show mb-4"><i className="fa-solid fa-circle-check me-2"></i>{msg}</div>}
+          {err && <div className="alert alert-danger alert-dismissible fade show mb-4"><i className="fa-solid fa-triangle-exclamation me-2"></i>{err}</div>}
+
+          <ul className="nav nav-pills nav-pills-gob mb-4" role="tablist">
+            <li className="nav-item">
+              <button className={`nav-link ${tab==='persona'?'active':''}`} onClick={()=>{limpiarMensajes(); setTab('persona');}}><i className="fa-solid fa-user-plus me-2"></i>1. Registrar Persona</button>
+            </li>
+            <li className="nav-item">
+              <button className={`nav-link ${tab==='vacuna'?'active':''}`} onClick={()=>{limpiarMensajes(); setTab('vacuna');}}><i className="fa-solid fa-syringe me-2"></i>2. Cargar Vacuna</button>
+            </li>
+            <li className="nav-item">
+              <button className={`nav-link ${tab==='examenes'?'active':''}`} onClick={()=>{limpiarMensajes(); setTab('examenes');}}><i className="fa-solid fa-file-medical me-2"></i>3. Exámenes Externos para Informe</button>
+            </li>
+          </ul>
+
+          {tab === 'persona' && (
+            <div className="card card-futurista p-4 p-md-5">
+              <h4 className="fw-bold text-azul mb-4"><i className="fa-solid fa-id-card me-2 text-info"></i>Datos Básicos del Ciudadano</h4>
+              <form onSubmit={handleRegistrarPersona}>
+                <div className="row g-3">
+                  <div className="col-md-4"><label className="form-label">Cédula</label><input type="text" className="form-control" placeholder="V-28123456" value={cedulaPersona} onChange={(e)=>setCedulaPersona(e.target.value)} required /></div>
+                  <div className="col-md-4"><label className="form-label">Nombres</label><input type="text" className="form-control" value={nombres} onChange={(e)=>setNombres(e.target.value)} required /></div>
+                  <div className="col-md-4"><label className="form-label">Apellidos</label><input type="text" className="form-control" value={apellidos} onChange={(e)=>setApellidos(e.target.value)} required /></div>
+                  <div className="col-md-4"><label className="form-label">Fecha Nacimiento</label><input type="date" className="form-control" value={fechaNacimiento} onChange={(e)=>setFechaNacimiento(e.target.value)} required /></div>
+                  <div className="col-md-4"><label className="form-label">Correo Electrónico</label><input type="email" className="form-control" value={correo} onChange={(e)=>setCorreo(e.target.value)} required /></div>
+                  <div className="col-md-4"><label className="form-label">Teléfono</label><input type="tel" className="form-control" value={telefono} onChange={(e)=>setTelefono(e.target.value)} required /></div>
+                  <div className="col-md-12"><label className="form-label">Ubicación</label><input type="text" className="form-control" value={ubicacion} onChange={(e)=>setUbicacion(e.target.value)} /></div>
+                  <div className="col-12 mt-4"><button type="submit" className="btn btn-turquesa">Guardar Ciudadano</button></div>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {tab === 'vacuna' && (
+            <div className="card card-futurista p-4 p-md-5">
+              <h4 className="fw-bold text-azul mb-4"><i className="fa-solid fa-vial me-2 text-info"></i>Registro de Dosis Inmunológica Aplicada</h4>
+              <form onSubmit={handleRegistrarVacuna}>
+                <div className="row g-3">
+                  <div className="col-md-4"><label className="form-label">Cédula Paciente</label><input type="text" className="form-control" placeholder="V-28123456" value={cedulaVacuna} onChange={(e)=>setCedulaVacuna(e.target.value)} required /></div>
+                  <div className="col-md-4">
+                    <label className="form-label">Vacuna Aplicada</label>
+                    <select className="form-select" value={vacuna} onChange={(e)=>setVacuna(e.target.value)}><option>BCG</option><option>Pentavalente</option><option>Polio</option><option>Fiebre Amarilla</option></select>
+                  </div>
+                  <div className="col-md-4"><label className="form-label">Número de Lote</label><input type="text" className="form-control" placeholder="L-4471" value={lote} onChange={(e)=>setLote(e.target.value)} required /></div>
+                  <div className="col-md-6"><label className="form-label">Fecha de Aplicación</label><input type="date" className="form-control" value={fechaAplicacion} onChange={(e)=>setFechaAplicacion(e.target.value)} required /></div>
+                  <div className="col-md-6"><label className="form-label">Centro Asistencial</label><input type="text" className="form-control" value={centroSalud} onChange={(e)=>setCentroSalud(e.target.value)} required /></div>
+                  <div className="col-12 mt-4"><button type="submit" className="btn btn-turquesa">Registrar Dosis</button></div>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {tab === 'examenes' && (
+            <div className="card card-futurista p-4 p-md-5">
+              <h4 className="fw-bold text-azul mb-4"><i className="fa-solid fa-paperclip me-2 text-info"></i>Anexo de Exámenes para la Subregión</h4>
+              <form onSubmit={handleAnexarExamen}>
+                <div className="row g-3">
+                  <div className="col-md-6"><label className="form-label">Cédula Paciente</label><input type="text" className="form-control" value={cedulaExamen} onChange={(e)=>setCedulaExamen(e.target.value)} required /></div>
+                  <div className="col-md-6">
+                    <label className="form-label">Tipo de Examen</label>
+                    <select className="form-select" value={tipoExamen} onChange={(e)=>setTipoExamen(e.target.value)}><option>Serología de Anticuerpos</option><option>Informe de Exención Médica</option></select>
+                  </div>
+                  <div className="col-12"><label className="form-label">Adjuntar Documento Digital (PDF/JPG)</label><input type="file" className="form-control" onChange={(e)=>setArchivoNombre(e.target.files?.[0]?.name || '')} required /></div>
+                  <div className="col-12"><label className="form-label">Observación</label><input type="text" className="form-control" placeholder="Observación clínica opcional" value={observacion} onChange={(e)=>setObservacion(e.target.value)} /></div>
+                  <div className="col-12 mt-4"><button type="submit" className="btn btn-turquesa">Cargar Documento para Subregión</button></div>
+                </div>
+              </form>
+            </div>
+          )}
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('root-centro')).render(<CentroApp />);
+  </script>
+</body>
+</html>
