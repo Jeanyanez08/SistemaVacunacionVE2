@@ -17,7 +17,7 @@ const pacienteController = {
   async consultarPorCedula(req, res) {
     try {
       const { cedula } = req.params;
-      if (!cedula) {
+      if (!cedula || !cedula.trim()) {
         return res.status(400).json({ ok: false, mensaje: 'La cédula es obligatoria' });
       }
 
@@ -26,7 +26,8 @@ const pacienteController = {
         return res.status(404).json({ ok: false, mensaje: 'Ciudadano no encontrado en el registro' });
       }
 
-      const vacunas = await PacienteModel.obtenerVacunasPorPacienteId(paciente.id);
+      const personaId = paciente.id_personas ?? paciente.id;
+      const vacunas = await PacienteModel.obtenerVacunasPorPacienteId(personaId);
 
       return res.status(200).json({
         ok: true,
@@ -46,7 +47,7 @@ const pacienteController = {
     try {
       const { cedula, nombres, apellidos, fecha_nacimiento, correo, telefono, ubicacion } = req.body;
 
-      if (!cedula || !nombres || !apellidos) {
+      if (!cedula?.trim() || !nombres?.trim() || !apellidos?.trim()) {
         return res.status(400).json({
           ok: false,
           mensaje: 'Cédula, nombres y apellidos son requeridos'
@@ -90,7 +91,7 @@ const pacienteController = {
       const { id } = req.params;
       const { cedula, nombres, apellidos, fecha_nacimiento, correo, telefono, ubicacion } = req.body;
 
-      if (!cedula || !nombres || !apellidos) {
+      if (!cedula?.trim() || !nombres?.trim() || !apellidos?.trim()) {
         return res.status(400).json({
           ok: false,
           mensaje: 'Cédula, nombres y apellidos son requeridos'

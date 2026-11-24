@@ -4,35 +4,38 @@ const ExamenModel = {
   async listarTodos() {
     const [rows] = await db.query(
       `SELECT e.*, p.cedula, p.nombres, p.apellidos
-       FROM examenes_externos e
-       INNER JOIN pacientes p ON e.paciente_id = p.id
-       ORDER BY e.id DESC`
+       FROM examenes e
+       INNER JOIN personas p ON e.id_personas = p.id_personas
+       ORDER BY e.id_examenes DESC`
     );
     return rows;
   },
 
-  async crearExamen({ paciente_id, tipo_examen, archivo_url, observacion }) {
+  async crearExamen({ id_personas, nombre_archivo, ruta_archivo }) {
     const [result] = await db.query(
-      `INSERT INTO examenes_externos
-        (paciente_id, tipo_examen, archivo_url, observacion, estado_promesa)
-       VALUES (?, ?, ?, ?, 'pendiente')`,
-      [paciente_id, tipo_examen, archivo_url || null, observacion || '']
+      `INSERT INTO examenes
+        (id_personas, nombre_archivo, ruta_archivo)
+       VALUES (?, ?, ?)`,
+      [id_personas, nombre_archivo, ruta_archivo]
     );
     return result.insertId;
   },
 
-  async actualizarDictamen(id, { estado_promesa, dictamen_subregion }) {
+  async actualizarArchivo(idExamenes, { nombre_archivo, ruta_archivo }) {
     const [result] = await db.query(
-      `UPDATE examenes_externos
-       SET estado_promesa = ?, dictamen_subregion = ?
-       WHERE id = ?`,
-      [estado_promesa, dictamen_subregion, id]
+      `UPDATE examenes
+       SET nombre_archivo = ?, ruta_archivo = ?
+       WHERE id_examenes = ?`,
+      [nombre_archivo, ruta_archivo, idExamenes]
     );
     return result.affectedRows;
   },
 
-  async eliminar(id) {
-    const [result] = await db.query('DELETE FROM examenes_externos WHERE id = ?', [id]);
+  async eliminar(idExamenes) {
+    const [result] = await db.query(
+      'DELETE FROM examenes WHERE id_examenes = ?',
+      [idExamenes]
+    );
     return result.affectedRows;
   }
 };
