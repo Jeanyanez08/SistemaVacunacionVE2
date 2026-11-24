@@ -17,12 +17,14 @@ const examenController = {
 
   async anexarExamen(req, res) {
     try {
-      const { cedula, tipo_examen, archivo_url, observacion } = req.body;
+      const { cedula, nombre_archivo, ruta_archivo, archivo_url, tipo_examen } = req.body;
+      const rutaFinal = ruta_archivo || archivo_url || '';
+      const nombreFinal = nombre_archivo || tipo_examen || 'examen';
 
-      if (!cedula || !tipo_examen) {
+      if (!cedula || !cedula.trim() || (!rutaFinal && !nombreFinal)) {
         return res.status(400).json({
           ok: false,
-          mensaje: 'Cédula y tipo de examen son obligatorios'
+          mensaje: 'La cédula y los datos del archivo o examen son obligatorios'
         });
       }
 
@@ -34,11 +36,11 @@ const examenController = {
         });
       }
 
+      const idPersonas = paciente.id_personas ?? paciente.id;
       const idExamen = await ExamenModel.crearExamen({
-        paciente_id: paciente.id,
-        tipo_examen,
-        archivo_url,
-        observacion
+        id_personas: idPersonas,
+        nombre_archivo: nombreFinal,
+        ruta_archivo: rutaFinal
       });
 
       return res.status(201).json({
@@ -58,18 +60,19 @@ const examenController = {
   async procesarDictamenSubregion(req, res) {
     try {
       const { id } = req.params;
-      const { estado_promesa, dictamen_subregion } = req.body;
+      const { nombre_archivo, ruta_archivo, archivo_url } = req.body;
+      const rutaFinal = ruta_archivo || archivo_url || '';
 
-      if (!['aprobado', 'rechazado', 'pendiente'].includes(estado_promesa)) {
+      if (!nombre_archivo && !rutaFinal) {
         return res.status(400).json({
           ok: false,
-          mensaje: 'Estado de promesa no válido'
+          mensaje: 'Debe indicar nombre_archivo o ruta_archivo para actualizar'
         });
       }
 
-      const actualizados = await ExamenModel.actualizarDictamen(id, {
-        estado_promesa,
-        dictamen_subregion: dictamen_subregion || ''
+      const actualizados = await ExamenModel.actualizarArchivo(id, {
+        nombre_archivo: nombre_archivo || 'examen',
+        ruta_archivo: rutaFinal
       });
 
       if (actualizados === 0) {
@@ -78,7 +81,7 @@ const examenController = {
 
       return res.status(200).json({
         ok: true,
-        mensaje: `Dictamen actualizado a: ${estado_promesa}`
+        mensaje: 'Registro de examen actualizado correctamente'
       });
     } catch (error) {
       return res.status(500).json({
