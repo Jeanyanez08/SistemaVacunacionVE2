@@ -2,40 +2,63 @@ import { useState, useEffect } from 'react';
 
 const API_URL = 'http://localhost:5000/api';
 
+const estadoInicialPersona = {
+  cedula: '',
+  nombres: '',
+  apellidos: '',
+  fecha_nacimiento: '',
+  correo: '',
+  telefono: ''
+};
+
+const estadoInicialVacuna = {
+  cedula: '',
+  vacuna: 'BCG',
+  lote: '',
+  centro_salud: '1',
+  fecha_aplicacion: new Date().toISOString().slice(0, 10),
+  nro_dosis: 1
+};
+
+const estadoInicialExamen = {
+  cedula: '',
+  nombre_archivo: '',
+  ruta_archivo: ''
+};
+
 export default function App() {
-  const [pacientes, setPacientes] = useState([]);
+  const [personas, setPersonas] = useState([]);
   const [vacunas, setVacunas] = useState([]);
   const [examenes, setExamenes] = useState([]);
+
   const [mensaje, setMensaje] = useState('');
   const [error, setError] = useState('');
 
-  // Estado formulario Paciente (Crear / Editar)
-  const [editandoId, setEditandoId] = useState(null);
-  const [formPaciente, setFormPaciente] = useState({
-    cedula: '',
-    nombres: '',
-    apellidos: '',
-    fecha_nacimiento: '',
-    correo: '',
-    telefono: '',
-    ubicacion: 'San Juan de los Morros'
-  });
+  // Crear / Editar Persona
+  const [editPersonaId, setEditPersonaId] = useState(null);
+  const [formPersona, setFormPersona] = useState(estadoInicialPersona);
 
-  // Estado formulario Vacuna
-  const [formVacuna, setFormVacuna] = useState({
-    cedula: '',
+  // Crear Vacuna
+  const [formVacuna, setFormVacuna] = useState(estadoInicialVacuna);
+
+  // Editar Vacuna
+  const [editVacunaId, setEditVacunaId] = useState(null);
+  const [formEditVacuna, setFormEditVacuna] = useState({
     vacuna: '',
     lote: '',
-    fecha_aplicacion: new Date().toISOString().slice(0, 10),
-    centro_salud: 'Hospital Dr. Israel Ranuárez Balza'
+    centro_salud: '1',
+    fecha_aplicacion: '',
+    nro_dosis: 1
   });
 
-  // Estado formulario Examen
-  const [formExamen, setFormExamen] = useState({
-    cedula: '',
-    tipo_examen: '',
-    archivo_url: '',
-    observacion: ''
+  // Crear Examen
+  const [formExamen, setFormExamen] = useState(estadoInicialExamen);
+
+  // Editar Examen
+  const [editExamenId, setEditExamenId] = useState(null);
+  const [formEditExamen, setFormEditExamen] = useState({
+    nombre_archivo: '',
+    ruta_archivo: ''
   });
 
   const limpiarAlertas = () => {
@@ -43,24 +66,23 @@ export default function App() {
     setError('');
   };
 
-  // READ: Cargar datos desde el backend
   const cargarTodo = async () => {
     try {
-      const [resPac, resVac, resExa] = await Promise.all([
+      const [rPer, rVac, rExa] = await Promise.all([
         fetch(`${API_URL}/pacientes`),
         fetch(`${API_URL}/vacunas`),
         fetch(`${API_URL}/examenes`)
       ]);
 
-      const dataPac = await resPac.json();
-      const dataVac = await resVac.json();
-      const dataExa = await resExa.json();
+      const dPer = await rPer.json();
+      const dVac = await rVac.json();
+      const dExa = await rExa.json();
 
-      if (dataPac.ok) setPacientes(dataPac.data || []);
-      if (dataVac.ok) setVacunas(dataVac.data || []);
-      if (dataExa.ok) setExamenes(dataExa.data || []);
+      if (dPer.ok) setPersonas(dPer.data || []);
+      if (dVac.ok) setVacunas(dVac.data || []);
+      if (dExa.ok) setExamenes(dExa.data || []);
     } catch {
-      setError('No se pudo conectar con el backend en http://localhost:5000. Verifica que node server.js esté corriendo.');
+      setError('No se pudo conectar con http://localhost:5000. Verifica que el backend esté encendido.');
     }
   };
 
@@ -68,81 +90,80 @@ export default function App() {
     cargarTodo();
   }, []);
 
-  // CREATE & UPDATE: Guardar o actualizar paciente
-  const handleGuardarPaciente = async (e) => {
+  // --- PERSONAS: CREAR, EDITAR (PUT) Y ELIMINAR (DELETE) ---
+  const guardarPersona = async (e) => {
     e.preventDefault();
     limpiarAlertas();
 
-    const url = editandoId
-      ? `${API_URL}/pacientes/${editandoId}`
+    const url = editPersonaId
+      ? `${API_URL}/pacientes/${editPersonaId}`
       : `${API_URL}/pacientes/registrar`;
-    const method = editandoId ? 'PUT' : 'POST';
+    const method = editPersonaId ? 'PUT' : 'POST';
 
     try {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formPaciente)
+        body: JSON.stringify(formPersona)
       });
       const data = await res.json();
 
       if (!res.ok || !data.ok) {
-        setError(data.mensaje || 'Error al guardar paciente');
+        setError(data.mensaje || data.message || 'No se pudo guardar la persona');
         return;
       }
 
-      setMensaje(data.mensaje || (editandoId ? 'Paciente actualizado' : 'Paciente registrado'));
-      setEditandoId(null);
-      setFormPaciente({
-        cedula: '',
-        nombres: '',
-        apellidos: '',
-        fecha_nacimiento: '',
-        correo: '',
-        telefono: '',
-        ubicacion: 'San Juan de los Morros'
-      });
+      setMensaje(data.mensaje || data.message || (editPersonaId ? 'Persona actualizada' : 'Persona registrada'));
+      setEditPersonaId(null);
+      setFormPersona(estadoInicialPersona);
       cargarTodo();
     } catch {
-      setError('Error de red al guardar el paciente');
+      setError('Error de conexión al guardar la persona');
     }
   };
 
-  const iniciarEdicion = (p) => {
+  const prepararEditarPersona = (p) => {
     limpiarAlertas();
-    setEditandoId(p.id);
-    setFormPaciente({
+    setEditPersonaId(p.id_personas);
+    setFormPersona({
       cedula: p.cedula || '',
       nombres: p.nombres || '',
       apellidos: p.apellidos || '',
       fecha_nacimiento: p.fecha_nacimiento ? String(p.fecha_nacimiento).slice(0, 10) : '',
       correo: p.correo || '',
-      telefono: p.telefono || '',
-      ubicacion: p.ubicacion || ''
+      telefono: p.telefono || ''
     });
   };
 
-  // DELETE: Eliminar paciente
-  const eliminarPaciente = async (id) => {
+  const eliminarPersona = async (id_personas) => {
     limpiarAlertas();
     try {
-      const res = await fetch(`${API_URL}/pacientes/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/pacientes/${id_personas}`, {
+        method: 'DELETE'
+      });
       const data = await res.json();
+
       if (!res.ok || !data.ok) {
-        setError(data.mensaje || 'No se pudo eliminar el paciente');
+        setError(data.mensaje || data.message || 'No se pudo eliminar la persona');
         return;
       }
-      setMensaje(data.mensaje || 'Paciente eliminado');
+
+      setMensaje(data.mensaje || data.message || 'Persona eliminada');
+      if (editPersonaId === id_personas) {
+        setEditPersonaId(null);
+        setFormPersona(estadoInicialPersona);
+      }
       cargarTodo();
     } catch {
-      setError('Error de red al eliminar paciente');
+      setError('Error de conexión al eliminar la persona');
     }
   };
 
-  // CREATE: Registrar vacuna
-  const handleRegistrarVacuna = async (e) => {
+  // --- VACUNAS: REGISTRAR, EDITAR (PUT) Y ELIMINAR (DELETE) ---
+  const registrarVacuna = async (e) => {
     e.preventDefault();
     limpiarAlertas();
+
     try {
       const res = await fetch(`${API_URL}/vacunas/registrar`, {
         method: 'POST',
@@ -150,39 +171,84 @@ export default function App() {
         body: JSON.stringify(formVacuna)
       });
       const data = await res.json();
+
       if (!res.ok || !data.ok) {
-        setError(data.mensaje || 'Error al registrar vacuna');
+        setError(data.mensaje || data.message || 'No se pudo registrar la vacuna');
         return;
       }
-      setMensaje(data.mensaje || 'Vacuna registrada');
-      setFormVacuna({ ...formVacuna, vacuna: '', lote: '' });
+
+      setMensaje(data.mensaje || data.message || 'Dosis registrada');
+      setFormVacuna({ ...formVacuna, lote: '', nro_dosis: 1 });
       cargarTodo();
     } catch {
-      setError('Error de red al registrar vacuna');
+      setError('Error de conexión al registrar la vacuna');
     }
   };
 
-  // DELETE: Eliminar vacuna
-  const eliminarVacuna = async (id) => {
+  const prepararEditarVacuna = (v) => {
+    limpiarAlertas();
+    setEditVacunaId(v.id_registro);
+    setFormEditVacuna({
+      vacuna: v.nombre_vacuna || String(v.id_vacunas || ''),
+      lote: v.numero_lote || String(v.id_lote || ''),
+      centro_salud: String(v.id_centros || '1'),
+      fecha_aplicacion: v.fecha_aplicacion ? String(v.fecha_aplicacion).slice(0, 10) : '',
+      nro_dosis: v.nro_dosis || 1
+    });
+  };
+
+  const guardarEdicionVacuna = async (e) => {
+    e.preventDefault();
+    if (!editVacunaId) return;
+    limpiarAlertas();
+
+    try {
+      const res = await fetch(`${API_URL}/vacunas/${editVacunaId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formEditVacuna)
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setError(data.mensaje || data.message || 'No se pudo actualizar la vacuna');
+        return;
+      }
+
+      setMensaje(data.mensaje || data.message || 'Vacuna actualizada');
+      setEditVacunaId(null);
+      cargarTodo();
+    } catch {
+      setError('Error de conexión al actualizar la vacuna');
+    }
+  };
+
+  const eliminarVacuna = async (id_registro) => {
     limpiarAlertas();
     try {
-      const res = await fetch(`${API_URL}/vacunas/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/vacunas/${id_registro}`, {
+        method: 'DELETE'
+      });
       const data = await res.json();
+
       if (!res.ok || !data.ok) {
-        setError(data.mensaje || 'No se pudo eliminar la vacuna');
+        setError(data.mensaje || data.message || 'No se pudo eliminar la vacuna');
         return;
       }
-      setMensaje(data.mensaje || 'Vacuna eliminada');
+
+      setMensaje(data.mensaje || data.message || 'Vacuna eliminada');
+      if (editVacunaId === id_registro) setEditVacunaId(null);
       cargarTodo();
     } catch {
-      setError('Error de red al eliminar vacuna');
+      setError('Error de conexión al eliminar la vacuna');
     }
   };
 
-  // CREATE: Anexar examen externo
-  const handleAnexarExamen = async (e) => {
+  // --- EXAMENES: ANEXAR, EDITAR (PUT) Y ELIMINAR (DELETE) ---
+  const anexarExamen = async (e) => {
     e.preventDefault();
     limpiarAlertas();
+
     try {
       const res = await fetch(`${API_URL}/examenes/anexar`, {
         method: 'POST',
@@ -190,116 +256,129 @@ export default function App() {
         body: JSON.stringify(formExamen)
       });
       const data = await res.json();
+
       if (!res.ok || !data.ok) {
-        setError(data.mensaje || 'Error al anexar examen');
+        setError(data.mensaje || data.message || 'No se pudo anexar el examen');
         return;
       }
-      setMensaje(data.mensaje || 'Examen anexado');
-      setFormExamen({ cedula: '', tipo_examen: '', archivo_url: '', observacion: '' });
+
+      setMensaje(data.mensaje || data.message || 'Examen anexado');
+      setFormExamen(estadoInicialExamen);
       cargarTodo();
     } catch {
-      setError('Error de red al anexar examen');
+      setError('Error de conexión al anexar el examen');
     }
   };
 
-  // UPDATE: Dictamen Subregión
-  const cambiarDictamen = async (id, estado_promesa) => {
+  const prepararEditarExamen = (ex) => {
     limpiarAlertas();
+    setEditExamenId(ex.id_examenes);
+    setFormEditExamen({
+      nombre_archivo: ex.nombre_archivo || '',
+      ruta_archivo: ex.ruta_archivo || ''
+    });
+  };
+
+  const guardarEdicionExamen = async (e) => {
+    e.preventDefault();
+    if (!editExamenId) return;
+    limpiarAlertas();
+
     try {
-      const res = await fetch(`${API_URL}/examenes/dictamen/${id}`, {
+      const res = await fetch(`${API_URL}/examenes/dictamen/${editExamenId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          estado_promesa,
-          dictamen_subregion: `Actualizado a ${estado_promesa}`
-        })
+        body: JSON.stringify(formEditExamen)
       });
       const data = await res.json();
+
       if (!res.ok || !data.ok) {
-        setError(data.mensaje || 'Error al actualizar dictamen');
+        setError(data.mensaje || data.message || 'No se pudo actualizar el examen');
         return;
       }
-      setMensaje(data.mensaje || 'Dictamen actualizado');
+
+      setMensaje(data.mensaje || data.message || 'Examen actualizado');
+      setEditExamenId(null);
       cargarTodo();
     } catch {
-      setError('Error de red al actualizar dictamen');
+      setError('Error de conexión al actualizar el examen');
     }
   };
 
-  // DELETE: Eliminar examen
-  const eliminarExamen = async (id) => {
+  const eliminarExamen = async (id_examenes) => {
     limpiarAlertas();
     try {
-      const res = await fetch(`${API_URL}/examenes/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/examenes/${id_examenes}`, {
+        method: 'DELETE'
+      });
       const data = await res.json();
+
       if (!res.ok || !data.ok) {
-        setError(data.mensaje || 'No se pudo eliminar examen');
+        setError(data.mensaje || data.message || 'No se pudo eliminar el examen');
         return;
       }
-      setMensaje(data.mensaje || 'Examen eliminado');
+
+      setMensaje(data.mensaje || data.message || 'Examen eliminado');
+      if (editExamenId === id_examenes) setEditExamenId(null);
       cargarTodo();
     } catch {
-      setError('Error de red al eliminar examen');
+      setError('Error de conexión al eliminar el examen');
     }
   };
 
   return (
     <div className="container my-4">
       <div className="card card-futurista p-4 mb-4">
-        <h2 className="fw-bold mb-1">Gestión CRUD · Sistema Nacional de Vacunación</h2>
-        <p className="text-muted mb-3">Operaciones en tiempo real conectadas a MySQL vía API (puerto 5000)</p>
-
-        <div className="d-flex flex-wrap gap-2">
-          <a href="login.html" className="btn btn-outline-primary btn-sm">Ir al Login Institucional</a>
-          <a href="view/admin/dashboard.html" className="btn btn-outline-secondary btn-sm">Panel Admin</a>
-          <a href="view/centro_salud/buscar_personas.html" className="btn btn-outline-secondary btn-sm">Centro de Salud</a>
-          <a href="view/subregion/procesar_solicitud.html" className="btn btn-outline-secondary btn-sm">Subregión</a>
-        </div>
-
+        <h2 className="fw-bold mb-1">Sistema Nacional de Vacunación · CRUD React</h2>
+        <p className="text-muted mb-0">Conectado a http://localhost:5000/api y base de datos sistema_vacunacion</p>
         {mensaje && <div className="alert alert-success mt-3 mb-0">{mensaje}</div>}
         {error && <div className="alert alert-danger mt-3 mb-0">{error}</div>}
       </div>
 
-      {/* PACIENTES: CREATE, READ, UPDATE, DELETE */}
+      {/* 1. PERSONAS (CREAR / EDITAR / ELIMINAR) */}
       <div className="card card-futurista p-4 mb-4">
-        <h4 className="fw-bold mb-3">{editandoId ? `Editar Paciente #${editandoId}` : 'Registrar Paciente'}</h4>
-        <form onSubmit={handleGuardarPaciente} className="row g-3 mb-4">
-          <div className="col-md-3">
+        <h4 className="fw-bold mb-3">
+          {editPersonaId ? `Editar Persona #${editPersonaId}` : 'Registrar Persona'}
+        </h4>
+
+        <form onSubmit={guardarPersona} className="row g-3 mb-4">
+          <div className="col-md-4">
             <input
               type="text"
               className="form-control"
-              placeholder="Cédula (ej. V12345678)"
-              value={formPaciente.cedula}
-              onChange={(e) => setFormPaciente({ ...formPaciente, cedula: e.target.value })}
+              placeholder="Cédula (ej. 32456663)"
+              value={formPersona.cedula}
+              onChange={(e) => setFormPersona({ ...formPersona, cedula: e.target.value })}
               required
             />
           </div>
-          <div className="col-md-3">
+          <div className="col-md-4">
             <input
               type="text"
               className="form-control"
               placeholder="Nombres"
-              value={formPaciente.nombres}
-              onChange={(e) => setFormPaciente({ ...formPaciente, nombres: e.target.value })}
+              value={formPersona.nombres}
+              onChange={(e) => setFormPersona({ ...formPersona, nombres: e.target.value })}
               required
             />
           </div>
-          <div className="col-md-3">
+          <div className="col-md-4">
             <input
               type="text"
               className="form-control"
               placeholder="Apellidos"
-              value={formPaciente.apellidos}
-              onChange={(e) => setFormPaciente({ ...formPaciente, apellidos: e.target.value })}
+              value={formPersona.apellidos}
+              onChange={(e) => setFormPersona({ ...formPersona, apellidos: e.target.value })}
               required
             />
           </div>
-          <div className="col-md-3">
+          <div className="col-md-4">
             <input
               type="date"
               className="form-control"
-              value={formPaciente.fecha_nacimiento}
-              onChange={(e) => setFormPaciente({ ...formPaciente, fecha_nacimiento: e.target.value })}
+              value={formPersona.fecha_nacimiento}
+              onChange={(e) => setFormPersona({ ...formPersona, fecha_nacimiento: e.target.value })}
+              required
             />
           </div>
           <div className="col-md-4">
@@ -307,8 +386,8 @@ export default function App() {
               type="email"
               className="form-control"
               placeholder="Correo electrónico"
-              value={formPaciente.correo}
-              onChange={(e) => setFormPaciente({ ...formPaciente, correo: e.target.value })}
+              value={formPersona.correo}
+              onChange={(e) => setFormPersona({ ...formPersona, correo: e.target.value })}
             />
           </div>
           <div className="col-md-4">
@@ -316,38 +395,21 @@ export default function App() {
               type="text"
               className="form-control"
               placeholder="Teléfono"
-              value={formPaciente.telefono}
-              onChange={(e) => setFormPaciente({ ...formPaciente, telefono: e.target.value })}
-            />
-          </div>
-          <div className="col-md-4">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Ubicación"
-              value={formPaciente.ubicacion}
-              onChange={(e) => setFormPaciente({ ...formPaciente, ubicacion: e.target.value })}
+              value={formPersona.telefono}
+              onChange={(e) => setFormPersona({ ...formPersona, telefono: e.target.value })}
             />
           </div>
           <div className="col-12 d-flex gap-2">
             <button type="submit" className="btn btn-turquesa">
-              {editandoId ? 'Guardar Cambios' : 'Agregar Paciente'}
+              {editPersonaId ? 'Guardar Cambios' : 'Registrar Persona'}
             </button>
-            {editandoId && (
+            {editPersonaId && (
               <button
                 type="button"
                 className="btn btn-secondary"
                 onClick={() => {
-                  setEditandoId(null);
-                  setFormPaciente({
-                    cedula: '',
-                    nombres: '',
-                    apellidos: '',
-                    fecha_nacimiento: '',
-                    correo: '',
-                    telefono: '',
-                    ubicacion: 'San Juan de los Morros'
-                  });
+                  setEditPersonaId(null);
+                  setFormPersona(estadoInicialPersona);
                 }}
               >
                 Cancelar
@@ -363,23 +425,37 @@ export default function App() {
                 <th>ID</th>
                 <th>Cédula</th>
                 <th>Nombre Completo</th>
-                <th>Ubicación</th>
+                <th>Correo</th>
+                <th>Teléfono</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {pacientes.length === 0 ? (
-                <tr><td colSpan="5" className="text-center text-muted">Sin pacientes registrados</td></tr>
+              {personas.length === 0 ? (
+                <tr><td colSpan="6" className="text-center text-muted">Sin personas registradas</td></tr>
               ) : (
-                pacientes.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.id}</td>
+                personas.map((p) => (
+                  <tr key={p.id_personas}>
+                    <td>{p.id_personas}</td>
                     <td><strong>{p.cedula}</strong></td>
                     <td>{p.nombres} {p.apellidos}</td>
-                    <td>{p.ubicacion || '-'}</td>
+                    <td>{p.correo || '-'}</td>
+                    <td>{p.telefono || '-'}</td>
                     <td className="d-flex gap-2">
-                      <button className="btn btn-sm btn-warning" onClick={() => iniciarEdicion(p)}>Editar</button>
-                      <button className="btn btn-sm btn-danger" onClick={() => eliminarPaciente(p.id)}>Eliminar</button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-warning"
+                        onClick={() => prepararEditarPersona(p)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={() => eliminarPersona(p.id_personas)}
+                      >
+                        Eliminar
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -389,25 +465,26 @@ export default function App() {
         </div>
       </div>
 
-      {/* VACUNAS: CREATE, READ, DELETE */}
+      {/* 2. VACUNAS / DOSIS (CREAR / EDITAR / ELIMINAR) */}
       <div className="card card-futurista p-4 mb-4">
-        <h4 className="fw-bold mb-3">Dosis de Vacunas Aplicadas</h4>
-        <form onSubmit={handleRegistrarVacuna} className="row g-3 mb-4">
+        <h4 className="fw-bold mb-3">Registro de Dosis de Vacunas</h4>
+
+        <form onSubmit={registrarVacuna} className="row g-3 mb-4">
           <div className="col-md-2">
             <input
               type="text"
               className="form-control"
-              placeholder="Cédula paciente"
+              placeholder="Cédula"
               value={formVacuna.cedula}
               onChange={(e) => setFormVacuna({ ...formVacuna, cedula: e.target.value })}
               required
             />
           </div>
-          <div className="col-md-3">
+          <div className="col-md-2">
             <input
               type="text"
               className="form-control"
-              placeholder="Vacuna (ej. Fiebre Amarilla)"
+              placeholder="Vacuna"
               value={formVacuna.vacuna}
               onChange={(e) => setFormVacuna({ ...formVacuna, vacuna: e.target.value })}
               required
@@ -417,7 +494,7 @@ export default function App() {
             <input
               type="text"
               className="form-control"
-              placeholder="Lote"
+              placeholder="Lote o ID lote"
               value={formVacuna.lote}
               onChange={(e) => setFormVacuna({ ...formVacuna, lote: e.target.value })}
               required
@@ -425,16 +502,80 @@ export default function App() {
           </div>
           <div className="col-md-2">
             <input
-              type="date"
+              type="text"
               className="form-control"
-              value={formVacuna.fecha_aplicacion}
-              onChange={(e) => setFormVacuna({ ...formVacuna, fecha_aplicacion: e.target.value })}
+              placeholder="ID o nombre centro"
+              value={formVacuna.centro_salud}
+              onChange={(e) => setFormVacuna({ ...formVacuna, centro_salud: e.target.value })}
+              required
             />
           </div>
-          <div className="col-md-3">
-            <button type="submit" className="btn btn-gob w-100">Registrar Dosis</button>
+          <div className="col-md-2">
+            <input
+              type="number"
+              min="1"
+              className="form-control"
+              placeholder="Nro dosis"
+              value={formVacuna.nro_dosis}
+              onChange={(e) => setFormVacuna({ ...formVacuna, nro_dosis: Number(e.target.value) })}
+              required
+            />
+          </div>
+          <div className="col-md-2">
+            <button type="submit" className="btn btn-gob w-100">Cargar Dosis</button>
           </div>
         </form>
+
+        {editVacunaId && (
+          <form onSubmit={guardarEdicionVacuna} className="row g-3 mb-4 p-3 border rounded bg-light">
+            <div className="col-12"><strong>Editando Dosis #{editVacunaId}</strong></div>
+            <div className="col-md-3">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Vacuna"
+                value={formEditVacuna.vacuna}
+                onChange={(e) => setFormEditVacuna({ ...formEditVacuna, vacuna: e.target.value })}
+                required
+              />
+            </div>
+            <div className="col-md-2">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Lote / ID lote"
+                value={formEditVacuna.lote}
+                onChange={(e) => setFormEditVacuna({ ...formEditVacuna, lote: e.target.value })}
+                required
+              />
+            </div>
+            <div className="col-md-3">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="ID / nombre centro"
+                value={formEditVacuna.centro_salud}
+                onChange={(e) => setFormEditVacuna({ ...formEditVacuna, centro_salud: e.target.value })}
+                required
+              />
+            </div>
+            <div className="col-md-2">
+              <input
+                type="number"
+                min="1"
+                className="form-control"
+                placeholder="Nro dosis"
+                value={formEditVacuna.nro_dosis}
+                onChange={(e) => setFormEditVacuna({ ...formEditVacuna, nro_dosis: Number(e.target.value) })}
+                required
+              />
+            </div>
+            <div className="col-md-2 d-flex gap-2">
+              <button type="submit" className="btn btn-success btn-sm">Guardar</button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditVacunaId(null)}>Cancelar</button>
+            </div>
+          </form>
+        )}
 
         <div className="table-responsive">
           <table className="table table-custom align-middle">
@@ -442,10 +583,10 @@ export default function App() {
               <tr>
                 <th>ID</th>
                 <th>Cédula</th>
-                <th>Paciente</th>
+                <th>Ciudadano</th>
                 <th>Vacuna</th>
-                <th>Lote</th>
-                <th>Acción</th>
+                <th>Nro Dosis</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -453,14 +594,27 @@ export default function App() {
                 <tr><td colSpan="6" className="text-center text-muted">Sin dosis registradas</td></tr>
               ) : (
                 vacunas.map((v) => (
-                  <tr key={v.id}>
-                    <td>{v.id}</td>
+                  <tr key={v.id_registro}>
+                    <td>{v.id_registro}</td>
                     <td>{v.cedula}</td>
                     <td>{v.nombres} {v.apellidos}</td>
-                    <td><strong>{v.vacuna}</strong></td>
-                    <td>{v.lote}</td>
-                    <td>
-                      <button className="btn btn-sm btn-danger" onClick={() => eliminarVacuna(v.id)}>Eliminar</button>
+                    <td><strong>{v.nombre_vacuna || v.id_vacunas}</strong></td>
+                    <td>{v.nro_dosis}</td>
+                    <td className="d-flex gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-warning"
+                        onClick={() => prepararEditarVacuna(v)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={() => eliminarVacuna(v.id_registro)}
+                      >
+                        Eliminar
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -470,10 +624,11 @@ export default function App() {
         </div>
       </div>
 
-      {/* EXAMENES: CREATE, READ, UPDATE (DICTAMEN), DELETE */}
+      {/* 3. EXAMENES (CREAR / EDITAR / ELIMINAR) */}
       <div className="card card-futurista p-4">
-        <h4 className="fw-bold mb-3">Exámenes Externos · Subregión</h4>
-        <form onSubmit={handleAnexarExamen} className="row g-3 mb-4">
+        <h4 className="fw-bold mb-3">Exámenes Externos</h4>
+
+        <form onSubmit={anexarExamen} className="row g-3 mb-4">
           <div className="col-md-3">
             <input
               type="text"
@@ -488,34 +643,65 @@ export default function App() {
             <input
               type="text"
               className="form-control"
-              placeholder="Tipo de examen"
-              value={formExamen.tipo_examen}
-              onChange={(e) => setFormExamen({ ...formExamen, tipo_examen: e.target.value })}
+              placeholder="Nombre archivo (ej. serologia.pdf)"
+              value={formExamen.nombre_archivo}
+              onChange={(e) => setFormExamen({ ...formExamen, nombre_archivo: e.target.value })}
               required
             />
           </div>
-          <div className="col-md-3">
+          <div className="col-md-4">
             <input
               type="text"
               className="form-control"
-              placeholder="Observación"
-              value={formExamen.observacion}
-              onChange={(e) => setFormExamen({ ...formExamen, observacion: e.target.value })}
+              placeholder="Ruta o enlace del archivo"
+              value={formExamen.ruta_archivo}
+              onChange={(e) => setFormExamen({ ...formExamen, ruta_archivo: e.target.value })}
+              required
             />
           </div>
-          <div className="col-md-3">
-            <button type="submit" className="btn btn-turquesa w-100">Anexar Examen</button>
+          <div className="col-md-2">
+            <button type="submit" className="btn btn-turquesa w-100">Anexar</button>
           </div>
         </form>
+
+        {editExamenId && (
+          <form onSubmit={guardarEdicionExamen} className="row g-3 mb-4 p-3 border rounded bg-light">
+            <div className="col-12"><strong>Editando Examen #{editExamenId}</strong></div>
+            <div className="col-md-4">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Nombre archivo"
+                value={formEditExamen.nombre_archivo}
+                onChange={(e) => setFormEditExamen({ ...formEditExamen, nombre_archivo: e.target.value })}
+                required
+              />
+            </div>
+            <div className="col-md-5">
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Ruta archivo"
+                value={formEditExamen.ruta_archivo}
+                onChange={(e) => setFormEditExamen({ ...formEditExamen, ruta_archivo: e.target.value })}
+                required
+              />
+            </div>
+            <div className="col-md-3 d-flex gap-2">
+              <button type="submit" className="btn btn-success btn-sm">Guardar</button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setEditExamenId(null)}>Cancelar</button>
+            </div>
+          </form>
+        )}
 
         <div className="table-responsive">
           <table className="table table-custom align-middle">
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Paciente</th>
-                <th>Tipo Examen</th>
-                <th>Estado</th>
+                <th>Ciudadano</th>
+                <th>Archivo</th>
+                <th>Ruta</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -524,15 +710,26 @@ export default function App() {
                 <tr><td colSpan="5" className="text-center text-muted">Sin exámenes anexados</td></tr>
               ) : (
                 examenes.map((ex) => (
-                  <tr key={ex.id}>
-                    <td>{ex.id}</td>
+                  <tr key={ex.id_examenes}>
+                    <td>{ex.id_examenes}</td>
                     <td>{ex.nombres} {ex.apellidos} ({ex.cedula})</td>
-                    <td>{ex.tipo_examen}</td>
-                    <td><span className="badge bg-info text-dark">{ex.estado_promesa || 'pendiente'}</span></td>
-                    <td className="d-flex flex-wrap gap-1">
-                      <button className="btn btn-sm btn-success" onClick={() => cambiarDictamen(ex.id, 'aprobado')}>Aprobar</button>
-                      <button className="btn btn-sm btn-warning" onClick={() => cambiarDictamen(ex.id, 'rechazado')}>Rechazar</button>
-                      <button className="btn btn-sm btn-danger" onClick={() => eliminarExamen(ex.id)}>Eliminar</button>
+                    <td>{ex.nombre_archivo}</td>
+                    <td>{ex.ruta_archivo}</td>
+                    <td className="d-flex gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-warning"
+                        onClick={() => prepararEditarExamen(ex)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-danger"
+                        onClick={() => eliminarExamen(ex.id_examenes)}
+                      >
+                        Eliminar
+                      </button>
                     </td>
                   </tr>
                 ))
