@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 
 const pacienteRoutes = require('./routes/pacienteRoutes');
@@ -14,8 +16,15 @@ const usuarioRoutes = require('./routes/usuarioRoutes');
 
 const app = express();
 
+// Crea carpeta uploads si no existe para guardar exámenes reales (PDF/Imágenes)
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(uploadsDir));
 
 app.use('/api/pacientes', pacienteRoutes);
 app.use('/api/vacunas', vacunaRoutes);
@@ -33,7 +42,7 @@ app.get('/', (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error('Error no controlado:', err);
-  res.status(500).json({ ok: false, mensaje: 'Error interno del servidor' });
+  res.status(500).json({ ok: false, mensaje: err.message || 'Error interno del servidor' });
 });
 
 const PORT = process.env.PORT || 5000;
