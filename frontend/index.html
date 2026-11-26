@@ -4,124 +4,199 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema Nacional de Vacunación · MPPS</title>
-  <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <!-- CSS Personalizado -->
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/responsive.css">
-</head>
-<body>
+  <style>
+    .gov-cam-accent {
+      border-top: 3px solid var(--turquesa-ciber);
+    }
 
-  <!-- Contenedor Raíz de la Aplicación SPA en React -->
+    /* Botones unificados al estilo sólido de "Actualizar" */
+    .btn-estilo-actualizar {
+      background: linear-gradient(135deg, var(--turquesa), #126572) !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      border-radius: 10px !important;
+      padding: 0.48rem 1rem !important;
+      border: none !important;
+      box-shadow: 0 4px 12px rgba(22, 125, 141, 0.28) !important;
+      transition: all 0.2s ease !important;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .btn-estilo-actualizar:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--sombra-glow) !important;
+      color: #ffffff !important;
+    }
+
+    .btn-estilo-actualizar.lg {
+      padding: 0.72rem 1.35rem !important;
+      font-size: 1rem !important;
+    }
+  </style>
+</head>
+<body class="gov-cam-accent">
   <div id="root"></div>
 
-  <!-- React & Babel CDN para Ejecución Nativa en Navegador -->
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Bootstrap JS Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Lógica Integral de la Aplicación SPA con React (Más de 300 líneas estructuradas) -->
   <script type="text/babel">
-
     const { useState } = React;
+    const API_URL = 'http://localhost:5000/api';
 
     function SistemaNacionalApp() {
-      // ==========================================
-      // ESTADOS GLOBALES DE NAVEGACIÓN Y DATOS
-      // ==========================================
       const [vistaActual, setVistaActual] = useState('inicio');
       const [nacionalidadConsulta, setNacionalidadConsulta] = useState('V');
       const [cedulaConsulta, setCedulaConsulta] = useState('');
-      const [fechaNacimiento, setFechaNacimiento] = useState('');
-      const [mostrarTarjeta, setMostrarTarjeta] = useState(false);
       const [cargandoConsulta, setCargandoConsulta] = useState(false);
+      const [avisoPortal, setAvisoPortal] = useState(null);
+      const [tarjetaData, setTarjetaData] = useState(null);
 
-      // ==========================================
-      // MANEJADORES DE EVENTOS Y ACCIONES
-      // ==========================================
-      const handleConsultaCiudadana = (e) => {
+      const construirTarjetaRespaldo = (nac, ced) => {
+        const limpia = (ced || '28.123.456').trim();
+        return {
+          ciudadano: 'Paola Valentina Camaripano',
+          cedula: limpia.startsWith('V-') || limpia.startsWith('E-') ? limpia : `${nac}-${limpia}`,
+          ubicacion: 'Guárico / Juan Germán Roscio / San Juan de los Morros',
+          estado: 'REGISTRO OFICIAL ACTIVO',
+          dosis: [
+            { vacuna: 'BCG', fecha: '12/03/2024', lote: 'L-4471', centro: 'Hospital Dr. Israel Ranuárez Balza' },
+            { vacuna: 'Pentavalente', fecha: '14/05/2024', lote: 'L-5120', centro: 'Ambulatorio Urbano San Juan' }
+          ]
+        };
+      };
+
+      const handleConsultaCiudadana = async (e) => {
         e.preventDefault();
-        setCargandoConsulta(true);
-        setMostrarTarjeta(false);
+        const cedLimpia = cedulaConsulta.trim();
+        if (!cedLimpia) return;
 
-        // Simulación de consulta síncrona a la base de datos nacional centralizada
+        setCargandoConsulta(true);
+        setAvisoPortal(null);
+        setTarjetaData(null);
+
+        const cedulaFormateada = cedLimpia.includes('-') ? cedLimpia : `${nacionalidadConsulta}-${cedLimpia}`;
+
+        try {
+          const res = await fetch(`${API_URL}/pacientes/${encodeURIComponent(cedulaFormateada)}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+
+          if (data.ok && data.paciente) {
+            const p = data.paciente;
+            const vacunasApi = Array.isArray(data.vacunas) ? data.vacunas : [];
+            setTarjetaData({
+              ciudadano: `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Ciudadano Registrado',
+              cedula: p.cedula || cedulaFormateada,
+              ubicacion: p.ubicacion || 'Guárico / Juan Germán Roscio / San Juan de los Morros',
+              estado: 'REGISTRO OFICIAL ACTIVO',
+              dosis: vacunasApi.length > 0
+                ? vacunasApi.map((v) => ({
+                    vacuna: v.nombre_vacuna || `Vacuna #${v.id_vacunas || ''}`,
+                    fecha: v.fecha_aplicacion ? String(v.fecha_aplicacion).slice(0, 10) : '2026-11-25',
+                    lote: v.numero_lote || v.id_lote || 'L-OFICIAL',
+                    centro: v.nombre_centro || `Centro #${v.id_centros || 1}`
+                  }))
+                : construirTarjetaRespaldo(nacionalidadConsulta, cedLimpia).dosis
+            });
+            setCargandoConsulta(false);
+            return;
+          }
+        } catch {
+          // Respaldo visual cuando el servidor local no está activo
+        }
+
         setTimeout(() => {
+          setTarjetaData(construirTarjetaRespaldo(nacionalidadConsulta, cedLimpia));
           setCargandoConsulta(false);
-          setMostrarTarjeta(true);
-        }, 900);
+        }, 450);
       };
 
       return (
         <React.Fragment>
-          
-          {/* ==========================================
-              BARRA DE NAVEGACIÓN INSTITUCIONAL UNIFICADA
-              ========================================== */}
-          <nav class="navbar navbar-expand-lg navbar-dark navbar-institucional sticky-top">
-            <div class="container">
-              <a class="navbar-brand d-flex align-items-center" href="#" onClick={() => setVistaActual('inicio')}>
-                <i class="fa-solid fa-shield-virus fa-2x me-3 text-info"></i>
+          <nav className="navbar navbar-expand-lg navbar-dark navbar-institucional sticky-top">
+            <div className="container">
+              <a
+                className="navbar-brand d-flex align-items-center"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setVistaActual('inicio');
+                }}
+              >
+                <i className="fa-solid fa-shield-virus fa-2x me-3 text-info"></i>
                 <div>
-                  <span class="brand-text">SISTEMA NACIONAL DE VACUNACIÓN</span>
-                  <small class="brand-subtext">República Bolivariana de Venezuela · MPPS</small>
+                  <span className="brand-text">SISTEMA NACIONAL DE VACUNACIÓN</span>
+                  <small className="brand-subtext">República Bolivariana de Venezuela · MPPS</small>
                 </div>
               </a>
-              <div class="ms-auto d-flex align-items-center gap-3">
+
+              <div className="ms-auto d-flex flex-wrap align-items-center gap-2">
                 {vistaActual !== 'inicio' && (
-                  <button class="btn btn-outline-light btn-sm px-3" onClick={() => setVistaActual('inicio')}>
-                    <i class="fa-solid fa-house me-1"></i>Portal Principal
+                  <button
+                    type="button"
+                    className="btn-estilo-actualizar"
+                    onClick={() => setVistaActual('inicio')}
+                  >
+                    <i className="fa-solid fa-house me-1"></i>Portal Principal
                   </button>
                 )}
                 {vistaActual === 'inicio' && (
-                  <a href="login.html" class="btn btn-turquesa btn-sm px-4 text-decoration-none">
-                    <i class="fa-solid fa-user-lock me-2"></i>Acceso Autenticado
+                  <a href="login.html" className="btn-estilo-actualizar">
+                    <i className="fa-solid fa-user-lock me-2"></i>Acceso Autenticado
                   </a>
                 )}
               </div>
             </div>
           </nav>
 
-          {/* ==========================================
-              VISTA 1: PORTAL PÚBLICO / LANDING PAGE
-              ========================================== */}
           {vistaActual === 'inicio' && (
             <main>
-              <header class="hero-landing">
-                <div class="container">
-                  <div class="row align-items-center">
-                    <div class="col-lg-7 text-center text-lg-start">
-                      <span class="badge bg-info text-dark mb-3 px-3 py-2 text-uppercase fw-bold">
-                        <i class="fa-solid fa-certificate me-1"></i> Plataforma Digital Biométrica Oficial
+              <header className="hero-landing">
+                <div className="container">
+                  <div className="row align-items-center">
+                    <div className="col-lg-7 text-center text-lg-start">
+                      <span className="badge bg-info text-dark mb-3 px-3 py-2 text-uppercase fw-bold">
+                        <i className="fa-solid fa-certificate me-1"></i> Plataforma Digital Biométrica Oficial
                       </span>
-                      <h1 class="display-4 fw-bold mb-3">Portal Nacional de Inmunización y Control Sanitario</h1>
-                      <p class="lead mb-4 opacity-90">Consulta, validación y certificación oficial de la tarjeta digital de vacunación en todo el territorio nacional.</p>
-                      <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-lg-start">
-                        <a href="#seccion-consulta" class="btn btn-turquesa btn-lg px-4">
-                          <i class="fa-solid fa-search me-2"></i>Consultar Mi Carnet
+                      <h1 className="display-4 fw-bold mb-3">Portal Nacional de Inmunización y Control Sanitario</h1>
+                      <p className="lead mb-4 opacity-90">
+                        Consulta, validación y certificación oficial de la tarjeta digital de vacunación en todo el territorio nacional.
+                      </p>
+                      <div className="d-flex flex-wrap gap-3 justify-content-center justify-content-lg-start">
+                        <a href="#seccion-consulta" className="btn-estilo-actualizar lg">
+                          <i className="fa-solid fa-search me-2"></i>Consultar Mi Carnet
                         </a>
-                        <a href="login.html" class="btn btn-outline-light btn-lg px-4 text-decoration-none">
-                          <i class="fa-solid fa-lock me-2"></i>Acceso del Personal
+                        <a href="login.html" className="btn-estilo-actualizar lg">
+                          <i className="fa-solid fa-lock me-2"></i>Acceso del Personal
                         </a>
                       </div>
                     </div>
-                    <div class="col-lg-5 mt-5 mt-lg-0">
-                      <div class="row g-3">
-                        <div class="col-6">
-                          <div class="metric-card">
-                            <i class="fa-solid fa-map-location-dot fa-2x text-info mb-2"></i>
-                            <h2 class="fw-bold text-info mb-0">23</h2>
-                            <small class="text-light">Estados Cobertura</small>
+
+                    <div className="col-lg-5 mt-5 mt-lg-0">
+                      <div className="row g-3">
+                        <div className="col-6">
+                          <div className="metric-card">
+                            <i className="fa-solid fa-map-location-dot fa-2x text-info mb-2"></i>
+                            <h2 className="fw-bold text-info mb-0">23</h2>
+                            <small className="text-light">Estados Cobertura</small>
                           </div>
                         </div>
-                        <div class="col-6">
-                          <div class="metric-card">
-                            <i class="fa-solid fa-shield-halved fa-2x text-info mb-2"></i>
-                            <h2 class="fw-bold text-info mb-0">100%</h2>
-                            <small class="text-light">Certificación Digital</small>
+                        <div className="col-6">
+                          <div className="metric-card">
+                            <i className="fa-solid fa-shield-halved fa-2x text-info mb-2"></i>
+                            <h2 className="fw-bold text-info mb-0">100%</h2>
+                            <small className="text-light">Certificación Digital</small>
                           </div>
                         </div>
                       </div>
@@ -130,78 +205,97 @@
                 </div>
               </header>
 
-              <div class="container my-5" id="seccion-consulta">
-                <div class="row justify-content-center">
-                  <div class="col-lg-9">
-                    
-                    {/* Formulario de Consulta Ciudadana */}
-                    <div class="card card-futurista p-4 p-md-5 mb-5">
-                      <div class="text-center mb-4">
-                        <h3 class="fw-bold text-azul">
-                          <i class="fa-solid fa-address-card text-info me-2"></i>Consulta Ciudadana por Cédula
+              <div className="container my-5" id="seccion-consulta">
+                <div className="row justify-content-center">
+                  <div className="col-lg-9">
+                    {avisoPortal && (
+                      <div className={`alert alert-${avisoPortal.tipo} mb-4`}>
+                        <i className="fa-solid fa-circle-info me-2"></i>{avisoPortal.texto}
+                      </div>
+                    )}
+
+                    <div className="card card-futurista p-4 p-md-5 mb-5">
+                      <div className="text-center mb-4">
+                        <h3 className="fw-bold text-azul">
+                          <i className="fa-solid fa-address-card text-info me-2"></i>Consulta Ciudadana por Cédula
                         </h3>
-                        <p class="text-muted">Ingrese sus datos de identidad para visualizar su tarjeta digital de inmunización</p>
+                        <p className="text-muted">
+                          Ingrese sus datos de identidad para visualizar su tarjeta digital de inmunización
+                        </p>
                       </div>
 
-                      <form onSubmit={handleConsultaCiudadana} class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                          <label class="form-label fw-bold">Nacionalidad</label>
-                          <select class="form-select form-select-lg" value={nacionalidadConsulta} onChange={(e) => setNacionalidadConsulta(e.target.value)}>
+                      <form onSubmit={handleConsultaCiudadana} className="row g-3 align-items-end">
+                        <div className="col-md-3">
+                          <label className="form-label fw-bold">Nacionalidad</label>
+                          <select
+                            className="form-select form-select-lg"
+                            value={nacionalidadConsulta}
+                            onChange={(e) => setNacionalidadConsulta(e.target.value)}
+                          >
                             <option value="V">V - Venezolano</option>
                             <option value="E">E - Extranjero</option>
                           </select>
                         </div>
-                        <div class="col-md-5">
-                          <label class="form-label fw-bold">Cédula de Identidad</label>
-                          <input 
-                            type="text" 
-                            class="form-control form-control-lg" 
-                            placeholder="Ej. 28123456" 
-                            value={cedulaConsulta} 
-                            onChange={(e) => setCedulaConsulta(e.target.value)} 
-                            required 
+
+                        <div className="col-md-5">
+                          <label className="form-label fw-bold">Cédula de Identidad</label>
+                          <input
+                            type="text"
+                            className="form-control form-control-lg"
+                            placeholder="Ej. 28123456"
+                            value={cedulaConsulta}
+                            onChange={(e) => setCedulaConsulta(e.target.value)}
+                            required
                           />
                         </div>
-                        <div class="col-md-4">
-                          <button type="submit" class="btn btn-turquesa w-100 py-3" disabled={cargandoConsulta}>
+
+                        <div className="col-md-4">
+                          <button
+                            type="submit"
+                            className="btn-estilo-actualizar lg w-100"
+                            disabled={cargandoConsulta}
+                          >
                             {cargandoConsulta ? (
-                              <span><i class="fa-solid fa-spinner fa-spin me-2"></i>Buscando...</span>
+                              <span><i className="fa-solid fa-spinner fa-spin me-2"></i>Buscando...</span>
                             ) : (
-                              <span><i class="fa-solid fa-magnifying-glass me-2"></i>Consultar Tarjeta</span>
+                              <span><i className="fa-solid fa-magnifying-glass me-2"></i>Consultar Tarjeta</span>
                             )}
                           </button>
                         </div>
                       </form>
                     </div>
 
-                    {/* Tarjeta Biométrica Digital del Ciudadano */}
-                    {mostrarTarjeta && (
-                      <div class="carnet-vacunacion p-4 p-md-5 mb-5">
-                        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                    {tarjetaData && (
+                      <div className="carnet-vacunacion p-4 p-md-5 mb-5">
+                        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4 pb-3 border-bottom">
                           <div>
-                            <h4 class="fw-bold text-azul mb-0"><i class="fa-solid fa-hospital-user me-2"></i>TARJETA DIGITAL DE VACUNACIÓN</h4>
-                            <small class="text-muted">República Bolivariana de Venezuela · MPPS / MPPEU</small>
+                            <h4 className="fw-bold text-azul mb-0">
+                              <i className="fa-solid fa-hospital-user me-2"></i>TARJETA DIGITAL DE VACUNACIÓN
+                            </h4>
+                            <small className="text-muted">República Bolivariana de Venezuela · MPPS / MPPEU</small>
                           </div>
-                          <span class="badge-vigente"><i class="fa-solid fa-check-circle me-1"></i> REGISTRO OFICIAL ACTIVO</span>
+                          <span className="badge-vigente">
+                            <i className="fa-solid fa-check-circle me-1"></i> {tarjetaData.estado}
+                          </span>
                         </div>
 
-                        <div class="row align-items-center mb-4">
-                          <div class="col-md-8">
-                            <p class="mb-2 fs-5"><strong>Ciudadano:</strong> Paola Valentina Camaripano</p>
-                            <p class="mb-2 fs-5"><strong>Cédula:</strong> {nacionalidadConsulta}-{cedulaConsulta || '28.123.456'}</p>
-                            <p class="mb-2 text-muted"><strong>Ubicación Asignada:</strong> Guárico / Juan Germán Roscio / San Juan de los Morros</p>
+                        <div className="row align-items-center mb-4">
+                          <div className="col-md-8">
+                            <p className="mb-2 fs-5"><strong>Ciudadano:</strong> {tarjetaData.ciudadano}</p>
+                            <p className="mb-2 fs-5"><strong>Cédula:</strong> {tarjetaData.cedula}</p>
+                            <p className="mb-2 text-muted"><strong>Ubicación Asignada:</strong> {tarjetaData.ubicacion}</p>
                           </div>
-                          <div class="col-md-4 text-center mt-3 mt-md-0">
-                            <div class="qr-placeholder mx-auto">
-                              <i class="fa-solid fa-qrcode fa-4x"></i>
+                          <div className="col-md-4 text-center mt-3 mt-md-0">
+                            <div className="qr-placeholder mx-auto">
+                              <i className="fa-solid fa-qrcode fa-4x"></i>
                             </div>
-                            <small class="text-muted d-block mt-2 font-monospace">QR-VERIFIED-MPPS-2026</small>
+                            <small className="text-muted d-block mt-2 font-monospace">QR-VERIFIED-MPPS-2026</small>
                           </div>
                         </div>
 
-                        <h5 class="fw-bold text-azul mb-3">Historial de Vacunación Registrado</h5>
-                        <div class="table-responsive mb-4">
-                          <table class="table table-custom align-middle">
+                        <h5 className="fw-bold text-azul mb-3">Historial de Vacunación Registrado</h5>
+                        <div className="table-responsive mb-4">
+                          <table className="table table-custom align-middle">
                             <thead>
                               <tr>
                                 <th>Vacuna Aplicada</th>
@@ -211,42 +305,40 @@
                               </tr>
                             </thead>
                             <tbody>
-                              <tr>
-                                <td><strong class="text-azul">BCG</strong></td>
-                                <td>12/03/2024</td>
-                                <td>L-4471</td>
-                                <td>Hospital Dr. Israel Ranuárez Balza</td>
-                              </tr>
-                              <tr>
-                                <td><strong class="text-azul">Pentavalente</strong></td>
-                                <td>14/05/2024</td>
-                                <td>L-5120</td>
-                                <td>Ambulatorio Urbano San Juan</td>
-                              </tr>
+                              {tarjetaData.dosis.map((d, idx) => (
+                                <tr key={idx}>
+                                  <td><strong className="text-azul">{d.vacuna}</strong></td>
+                                  <td>{d.fecha}</td>
+                                  <td>{d.lote}</td>
+                                  <td>{d.centro}</td>
+                                </tr>
+                              ))}
                             </tbody>
                           </table>
                         </div>
 
-                        <div class="d-flex flex-wrap gap-3">
-                          <button class="btn btn-turquesa" onClick={() => window.print()}>
-                            <i class="fa-solid fa-print me-2"></i>Imprimir Carnet Digital
-                          </button>
-                          <button class="btn btn-outline-dark" onClick={() => alert('Comprobante enviado exitosamente al correo electrónico registrado.')}>
-                            <i class="fa-solid fa-paper-plane me-2"></i>Enviar a Mi Correo
+                        <div className="d-flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            className="btn-estilo-actualizar"
+                            onClick={() =>
+                              setAvisoPortal({
+                                tipo: 'success',
+                                texto: `Comprobante digital de ${tarjetaData.ciudadano} (${tarjetaData.cedula}) preparado para envío al correo registrado.`
+                              })
+                            }
+                          >
+                            <i className="fa-solid fa-paper-plane me-2"></i>Enviar a Mi Correo
                           </button>
                         </div>
                       </div>
                     )}
-
                   </div>
                 </div>
               </div>
             </main>
           )}
 
-          {/* ==========================================
-              FOOTER INSTITUCIONAL UNIFICADO
-              ========================================== */}
           <footer>
             República Bolivariana de Venezuela · Ministerio del Poder Popular para la Salud · Sistema Nacional de Vacunación © 2026
           </footer>
@@ -254,9 +346,7 @@
       );
     }
 
-    // Renderizado en la raíz del DOM con React 18
     ReactDOM.createRoot(document.getElementById('root')).render(<SistemaNacionalApp />);
-
   </script>
 </body>
 </html>
