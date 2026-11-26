@@ -3,61 +3,689 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Subregión de Salud · Certificación</title>
+  <title>Subregión de Salud · Evaluación y Certificación</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="../../css/styles.css">
   <link rel="stylesheet" href="../../css/responsive.css">
+  <style>
+    .gov-cam-accent {
+      border-top: 3px solid var(--turquesa-ciber);
+    }
+
+    .subregion-kpi {
+      background: var(--gris-tarjeta);
+      border: 1px solid var(--linea-borde);
+      border-left: 5px solid var(--azul-gob);
+      border-radius: 16px;
+      padding: 1.15rem 1.35rem;
+      box-shadow: var(--sombra-card);
+      height: 100%;
+    }
+
+    .subregion-kpi.pendiente { border-left-color: var(--amarillo-alerta); }
+    .subregion-kpi.aprobado { border-left-color: #198754; }
+    .subregion-kpi.rechazado { border-left-color: #dc3545; }
+    .subregion-kpi.total { border-left-color: var(--turquesa); }
+
+    .subregion-kpi-val {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--azul-gob);
+      font-family: Consolas, monospace;
+      margin-top: 0.2rem;
+    }
+
+    .ficha-expediente {
+      background: #f8fafc;
+      border: 1px solid var(--linea-borde);
+      border-radius: 14px;
+      padding: 1.25rem;
+    }
+
+    .soporte-item {
+      background: #ffffff;
+      border: 1px solid var(--linea-borde);
+      border-radius: 12px;
+      padding: 0.95rem 1.15rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .soporte-item:hover {
+      border-color: var(--turquesa);
+      box-shadow: var(--sombra-card);
+    }
+
+    /* Botones unificados al estilo sólido de "Actualizar" */
+    .btn-estilo-actualizar {
+      background: linear-gradient(135deg, var(--turquesa), #126572) !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      border-radius: 10px !important;
+      padding: 0.48rem 1rem !important;
+      border: none !important;
+      box-shadow: 0 4px 12px rgba(22, 125, 141, 0.28) !important;
+      transition: all 0.2s ease !important;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .btn-estilo-actualizar:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--sombra-glow) !important;
+      color: #ffffff !important;
+    }
+
+    .btn-estilo-actualizar.activo {
+      background: linear-gradient(135deg, var(--azul-gob), var(--turquesa)) !important;
+      outline: 2px solid var(--turquesa-ciber);
+    }
+
+    .btn-estilo-actualizar.sm {
+      padding: 0.32rem 0.75rem !important;
+      font-size: 0.82rem !important;
+    }
+  </style>
 </head>
-<body>
-  <nav class="navbar navbar-dark navbar-institucional">
-    <div class="container">
-      <a class="navbar-brand d-flex align-items-center" href="#">
+<body class="gov-cam-accent">
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-institucional sticky-top">
+    <div class="container-fluid px-lg-5">
+      <a class="navbar-brand d-flex align-items-center" href="procesar_solicitud.html">
         <i class="fa-solid fa-building-columns fa-2x me-3 text-info"></i>
         <div>
           <span class="brand-text">SUBREGIÓN DE SALUD / SANIDAD REGIONAL</span>
-          <small class="brand-subtext">Perfil 3 · Evaluación Epidemiológica y Emisión</small>
+          <small class="brand-subtext">Perfil 3 · Evaluación Epidemiológica, Auditoría de Soportes y Emisión</small>
         </div>
       </a>
-      <a href="../../login.html" class="btn btn-outline-danger btn-sm"><i class="fa-solid fa-power-off me-1"></i>Salir</a>
+
+      <div class="d-flex flex-wrap gap-2 ms-auto mt-2 mt-lg-0">
+        <button id="btnRefrescarTodo" type="button" class="btn-estilo-actualizar">
+          <i class="fa-solid fa-rotate me-1"></i>Actualizar
+        </button>
+        <a href="examenes_salud.html" class="btn-estilo-actualizar">
+          <i class="fa-solid fa-file-contract me-1"></i>Visor de Exámenes
+        </a>
+        <a href="../../login.html" class="btn-estilo-actualizar">
+          <i class="fa-solid fa-power-off me-1"></i>Salir
+        </a>
+      </div>
     </div>
   </nav>
 
-  <main class="container my-5">
-    <div class="card card-futurista p-4 p-md-5">
-      <h4 class="fw-bold text-azul mb-4"><i class="fa-solid fa-file-signature text-info me-2"></i>Evaluación de Expediente y Flujo "La Promesa"</h4>
+  <main class="container-fluid px-lg-5 my-4">
+    <div id="alertaSubregion" class="alert d-none mb-4"></div>
 
-      <div class="row g-3 mb-4 bg-light p-3 rounded border">
-        <div class="col-md-3"><strong>Ciudadano:</strong> Paola Camaripano</div>
-        <div class="col-md-3"><strong>Cédula:</strong> V-28.123.456</div>
-        <div class="col-md-3"><strong>Correo:</strong> paola@ejemplo.com</div>
-        <div class="col-md-3"><strong>Jurisdicción:</strong> Guárico / Roscio</div>
+    <!-- Indicadores de Subregión -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-xl-3">
+        <div class="subregion-kpi total">
+          <small class="text-muted fw-bold text-uppercase">Expedientes en Bandeja</small>
+          <div id="kpiExpTotal" class="subregion-kpi-val">0</div>
+          <small class="text-muted">Solicitudes de certificación sanitaria</small>
+        </div>
       </div>
 
-      <h5 class="fw-bold text-azul mb-3">1. Soportes y Exámenes Externos Anexados</h5>
-      <div class="p-3 bg-white border rounded mb-4 d-flex justify-content-between align-items-center">
-        <span><i class="fa-solid fa-file-pdf text-danger me-2"></i> <strong>Serologia_Anticuerpos.pdf</strong> (Cargado por Centro de Salud)</span>
-        <a href="examenes_salud.html" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-eye me-1"></i>Ver Examen</a>
+      <div class="col-sm-6 col-xl-3">
+        <div class="subregion-kpi pendiente">
+          <small class="text-muted fw-bold text-uppercase">Pendientes por Dictamen</small>
+          <div id="kpiExpPendientes" class="subregion-kpi-val">0</div>
+          <small class="text-muted">Requieren revisión epidemiológica</small>
+        </div>
       </div>
 
-      <h5 class="fw-bold text-azul mb-3">2. Dictamen Sanitario (Flujo "La Promesa")</h5>
-      <form>
-        <div class="mb-3">
-          <label class="form-label">Informe Técnico / Observaciones</label>
-          <textarea class="form-control" rows="3" placeholder="Redacte el dictamen de aprobación o rechazo..."></textarea>
+      <div class="col-sm-6 col-xl-3">
+        <div class="subregion-kpi aprobado">
+          <small class="text-muted fw-bold text-uppercase">Aprobados y Emitidos</small>
+          <div id="kpiExpAprobados" class="subregion-kpi-val">0</div>
+          <small class="text-muted">Certificados digitales emitidos</small>
         </div>
-        <div class="d-flex gap-3">
-          <button type="button" class="btn btn-turquesa" onclick="alert('¡Promesa Aprobada! Tarjeta digital certificada y enviada al correo.')">
-            <i class="fa-solid fa-circle-check me-2"></i>Aprobar y Emitir Tarjeta
-          </button>
-          <button type="button" class="btn btn-danger" onclick="alert('Solicitud rechazada. Informe de faltantes enviado al correo.')">
-            <i class="fa-solid fa-circle-xmark me-2"></i>Rechazar Solicitud
-          </button>
+      </div>
+
+      <div class="col-sm-6 col-xl-3">
+        <div class="subregion-kpi rechazado">
+          <small class="text-muted fw-bold text-uppercase">Rechazados / Observados</small>
+          <div id="kpiExpRechazados" class="subregion-kpi-val">0</div>
+          <small class="text-muted">Devueltos con observaciones técnicas</small>
         </div>
-      </form>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <!-- Bandeja Lateral de Expedientes -->
+      <div class="col-lg-4">
+        <div class="card card-futurista">
+          <div class="card-header-gob">
+            <h5 class="mb-0 fw-bold">
+              <i class="fa-solid fa-folder-tree me-2"></i>Bandeja de Expedientes
+            </h5>
+            <small class="opacity-75">Seleccione un ciudadano para evaluar</small>
+          </div>
+
+          <div class="p-3 p-md-4">
+            <div class="row g-2 mb-3">
+              <div class="col-12">
+                <input
+                  id="buscarExpediente"
+                  type="text"
+                  class="form-control"
+                  placeholder="Buscar por nombre, cédula o correo..."
+                >
+              </div>
+              <div class="col-8">
+                <select id="filtroEstatusExp" class="form-select">
+                  <option value="">Todos los estatus</option>
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Aprobado">Aprobado</option>
+                  <option value="Rechazado">Rechazado</option>
+                </select>
+              </div>
+              <div class="col-4">
+                <button id="btnLimpiarBandeja" type="button" class="btn-estilo-actualizar sm w-100">
+                  Limpiar
+                </button>
+              </div>
+            </div>
+
+            <div id="listaBandejaExpedientes" class="d-flex flex-column gap-2" style="max-height: 460px; overflow-y: auto;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Área Principal por Ventanas / Pestañas -->
+      <div class="col-lg-8">
+        <div class="card card-futurista p-4 p-md-5">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4 pb-3 border-bottom">
+            <div>
+              <h4 class="fw-bold text-azul mb-0">
+                <i class="fa-solid fa-file-signature text-info me-2"></i>Evaluación de Expediente y Flujo "La Promesa"
+              </h4>
+              <small id="subtituloVentanaActiva" class="text-muted">Ventana 1 · Ficha del ciudadano y esquema de vacunación</small>
+            </div>
+            <span id="badgeEstatusActual" class="badge bg-warning text-dark px-3 py-2">Pendiente</span>
+          </div>
+
+          <!-- Selector de Ventanas (evita amontonar todo en una sola columna larga) -->
+          <div class="d-flex flex-wrap gap-2 mb-4">
+            <button type="button" class="btn-estilo-actualizar sm activo" data-ventana="ficha">
+              <i class="fa-solid fa-id-card me-1"></i>1. Expediente y Dosis
+            </button>
+            <button type="button" class="btn-estilo-actualizar sm" data-ventana="soportes">
+              <i class="fa-solid fa-paperclip me-1"></i>2. Soportes Anexados
+            </button>
+            <button type="button" class="btn-estilo-actualizar sm" data-ventana="dictamen">
+              <i class="fa-solid fa-stamp me-1"></i>3. Dictamen Sanitario
+            </button>
+            <button type="button" class="btn-estilo-actualizar sm" data-ventana="historial">
+              <i class="fa-solid fa-clock-rotate-left me-1"></i>4. Historial de Sesión
+            </button>
+          </div>
+
+          <!-- VENTANA 1: FICHA Y DOSIS -->
+          <div id="ventana-ficha" class="ventana-subregion">
+            <div class="ficha-expediente mb-4">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Ciudadano</small>
+                  <strong id="detalleNombre">Paola Camaripano</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Cédula de Identidad</small>
+                  <strong id="detalleCedula">V-28.123.456</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Correo Electrónico</small>
+                  <strong id="detalleCorreo">paola@ejemplo.com</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Nro. Expediente</small>
+                  <span id="detalleIdExp" class="font-monospace fw-bold">#EXP-101</span>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Jurisdicción / Centro</small>
+                  <span id="detalleCentro">San Juan de los Morros · Guárico</span>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-muted d-block">Última Actualización</small>
+                  <span id="detalleFecha">2026-11-25</span>
+                </div>
+              </div>
+            </div>
+
+            <h5 class="fw-bold text-azul mb-3">
+              <i class="fa-solid fa-syringe text-info me-2"></i>Esquema de Vacunación Asociado
+            </h5>
+            <div class="table-responsive">
+              <table class="table table-custom align-middle mb-0">
+                <thead>
+                  <tr>
+                    <th>Biológico</th>
+                    <th>Dosis</th>
+                    <th>Lote</th>
+                    <th>Fecha Aplicación</th>
+                  </tr>
+                </thead>
+                <tbody id="cuerpoDosisExp"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- VENTANA 2: SOPORTES ANEXADOS -->
+          <div id="ventana-soportes" class="ventana-subregion d-none">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+              <h5 class="fw-bold text-azul mb-0">
+                <i class="fa-solid fa-paperclip text-info me-2"></i>Soportes y Exámenes Externos Anexados
+              </h5>
+              <span class="text-muted small">Cargados por el Centro de Salud</span>
+            </div>
+            <div id="contenedorSoportesExp" class="d-flex flex-column gap-3"></div>
+          </div>
+
+          <!-- VENTANA 3: DICTAMEN SANITARIO -->
+          <div id="ventana-dictamen" class="ventana-subregion d-none">
+            <h5 class="fw-bold text-azul mb-3">
+              <i class="fa-solid fa-stamp text-info me-2"></i>Emitir Dictamen Sanitario (Flujo "La Promesa")
+            </h5>
+            <form id="formDictamenSubregion">
+              <div class="mb-3">
+                <label class="form-label">Informe Técnico / Observaciones Epidemiológicas</label>
+                <textarea
+                  id="textoDictamen"
+                  class="form-control"
+                  rows="4"
+                  placeholder="Redacte el dictamen de aprobación, constancia de cumplimiento o motivo de rechazo..."
+                ></textarea>
+              </div>
+
+              <div class="d-flex flex-wrap gap-3">
+                <button id="btnAprobarExpediente" type="button" class="btn-estilo-actualizar">
+                  <i class="fa-solid fa-circle-check me-2"></i>Aprobar y Emitir Tarjeta
+                </button>
+                <button id="btnRechazarExpediente" type="button" class="btn-estilo-actualizar">
+                  <i class="fa-solid fa-circle-xmark me-2"></i>Rechazar Solicitud
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- VENTANA 4: HISTORIAL DE SESIÓN -->
+          <div id="ventana-historial" class="ventana-subregion d-none">
+            <h5 class="fw-bold text-azul mb-3">
+              <i class="fa-solid fa-clock-rotate-left text-info me-2"></i>Registro Reciente de Dictámenes Emitidos
+            </h5>
+            <div id="historialDictamenes" class="small text-muted">
+              Aún no se han emitido dictámenes en esta sesión.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
   <footer>República Bolivariana de Venezuela · Sistema Nacional de Vacunación © 2026</footer>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+
+    const expedientesBase = [
+      {
+        id_cert: 101,
+        id_personas: 1,
+        nombres: 'Paola',
+        apellidos: 'Camaripano',
+        cedula: 'V-28.123.456',
+        correo: 'paola@ejemplo.com',
+        centro: 'Hospital Dr. Israel Ranuárez Balza · Guárico',
+        fecha: '2026-11-25',
+        estatus: 'Pendiente',
+        dosis: [
+          { vacuna: 'Pentavalente', nro_dosis: 3, lote: 'L-4471', fecha: '2026-08-14' },
+          { vacuna: 'Fiebre Amarilla', nro_dosis: 1, lote: 'L-8820', fecha: '2026-09-02' }
+        ],
+        soportes: [
+          {
+            tipo: 'Serología de Anticuerpos',
+            archivo: 'Serologia_Anticuerpos.pdf',
+            origen: 'Centro de Salud',
+            estado: 'Verificado'
+          }
+        ]
+      },
+      {
+        id_cert: 102,
+        id_personas: 2,
+        nombres: 'Carlos',
+        apellidos: 'Mendoza',
+        cedula: 'V-24.980.114',
+        correo: 'carlos.mendoza@ejemplo.com',
+        centro: 'Ambulatorio Urbano Tipo II · Roscio',
+        fecha: '2026-11-24',
+        estatus: 'Pendiente',
+        dosis: [
+          { vacuna: 'BCG', nro_dosis: 1, lote: 'L-1094', fecha: '2026-05-19' }
+        ],
+        soportes: [
+          {
+            tipo: 'Informe de Exención Médica',
+            archivo: 'Informe_Exencion_Medica.pdf',
+            origen: 'Centro de Salud',
+            estado: 'En Revisión'
+          }
+        ]
+      },
+      {
+        id_cert: 103,
+        id_personas: 3,
+        nombres: 'Valeria',
+        apellidos: 'Rojas',
+        cedula: 'V-26.412.890',
+        correo: 'valeria.rojas@ejemplo.com',
+        centro: 'CDI San Juan · Guárico',
+        fecha: '2026-11-22',
+        estatus: 'Aprobado',
+        dosis: [
+          { vacuna: 'Polio', nro_dosis: 2, lote: 'L-3301', fecha: '2026-07-11' }
+        ],
+        soportes: [
+          {
+            tipo: 'Serología de Anticuerpos',
+            archivo: 'Soporte_Inmunizacion_Rojas.pdf',
+            origen: 'Centro de Salud',
+            estado: 'Validado'
+          }
+        ]
+      }
+    ];
+
+    let expedientes = JSON.parse(JSON.stringify(expedientesBase));
+    let idSeleccionado = expedientes[0].id_cert;
+    let ventanaActiva = 'ficha';
+    const historialSesion = [];
+
+    const subtitulosVentana = {
+      ficha: 'Ventana 1 · Ficha del ciudadano y esquema de vacunación',
+      soportes: 'Ventana 2 · Soportes y exámenes clínicos anexados',
+      dictamen: 'Ventana 3 · Emisión de dictamen sanitario ("La Promesa")',
+      historial: 'Ventana 4 · Historial de dictámenes emitidos en la sesión'
+    };
+
+    const buscarExpediente = document.getElementById('buscarExpediente');
+    const filtroEstatusExp = document.getElementById('filtroEstatusExp');
+    const listaBandejaExpedientes = document.getElementById('listaBandejaExpedientes');
+    const alertaSubregion = document.getElementById('alertaSubregion');
+    const textoDictamen = document.getElementById('textoDictamen');
+
+    function cambiarVentana(nombreVentana) {
+      ventanaActiva = nombreVentana;
+      document.querySelectorAll('.ventana-subregion').forEach((el) => {
+        el.classList.toggle('d-none', el.id !== `ventana-${nombreVentana}`);
+      });
+      document.querySelectorAll('[data-ventana]').forEach((btn) => {
+        btn.classList.toggle('activo', btn.dataset.ventana === nombreVentana);
+      });
+      document.getElementById('subtituloVentanaActiva').textContent =
+        subtitulosVentana[nombreVentana] || '';
+    }
+
+    function mostrarAlerta(tipo, mensaje) {
+      alertaSubregion.className = `alert alert-${tipo} mb-4`;
+      alertaSubregion.innerHTML = `<i class="fa-solid fa-circle-info me-2"></i>${mensaje}`;
+    }
+
+    function claseBadgeEstatus(estatus) {
+      const est = String(estatus || '').toLowerCase();
+      if (est.includes('aprob')) return 'bg-success';
+      if (est.includes('rechaz')) return 'bg-danger';
+      return 'bg-warning text-dark';
+    }
+
+    function actualizarKPIs() {
+      const total = expedientes.length;
+      const pendientes = expedientes.filter((e) => String(e.estatus || '').toLowerCase() === 'pendiente').length;
+      const aprobados = expedientes.filter((e) => String(e.estatus || '').toLowerCase().includes('aprob')).length;
+      const rechazados = expedientes.filter((e) => String(e.estatus || '').toLowerCase().includes('rechaz')).length;
+
+      document.getElementById('kpiExpTotal').textContent = total.toLocaleString('es-VE');
+      document.getElementById('kpiExpPendientes').textContent = pendientes.toLocaleString('es-VE');
+      document.getElementById('kpiExpAprobados').textContent = aprobados.toLocaleString('es-VE');
+      document.getElementById('kpiExpRechazados').textContent = rechazados.toLocaleString('es-VE');
+    }
+
+    function renderBandeja() {
+      const texto = buscarExpediente.value.trim().toLowerCase();
+      const estFiltro = filtroEstatusExp.value.trim().toLowerCase();
+
+      const filtrados = expedientes.filter((exp) => {
+        const estItem = String(exp.estatus || '').toLowerCase();
+        if (estFiltro && estItem !== estFiltro) return false;
+        if (texto) {
+          const blob = `${exp.id_cert || ''} ${exp.nombres || ''} ${exp.apellidos || ''} ${exp.cedula || ''} ${exp.correo || ''}`.toLowerCase();
+          if (!blob.includes(texto)) return false;
+        }
+        return true;
+      });
+
+      if (filtrados.length === 0) {
+        listaBandejaExpedientes.innerHTML = '<div class="text-center text-muted py-4 small">No hay expedientes con ese filtro</div>';
+        return;
+      }
+
+      listaBandejaExpedientes.innerHTML = filtrados.map((exp) => {
+        const activo = Number(exp.id_cert) === Number(idSeleccionado);
+        const nombre = `${exp.nombres || ''} ${exp.apellidos || ''}`.trim() || 'Ciudadano';
+        return `
+          <div
+            class="soporte-item ${activo ? 'border-info bg-light' : ''}"
+            style="cursor: pointer;"
+            onclick="seleccionarExpediente(${exp.id_cert})"
+          >
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <div>
+                <div class="fw-bold text-azul">${nombre}</div>
+                <small class="text-muted font-monospace">${exp.cedula || 'S/C'} · #EXP-${exp.id_cert}</small>
+              </div>
+              <span class="badge ${claseBadgeEstatus(exp.estatus)}">${exp.estatus || 'Pendiente'}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderDetalleExpediente() {
+      const exp = expedientes.find((e) => Number(e.id_cert) === Number(idSeleccionado)) || expedientes[0];
+      if (!exp) return;
+      idSeleccionado = exp.id_cert;
+
+      const nombreCompleto = `${exp.nombres || ''} ${exp.apellidos || ''}`.trim() || 'Ciudadano';
+      const estatus = exp.estatus || 'Pendiente';
+
+      document.getElementById('detalleNombre').textContent = nombreCompleto;
+      document.getElementById('detalleCedula').textContent = exp.cedula || '-';
+      document.getElementById('detalleCorreo').textContent = exp.correo || '-';
+      document.getElementById('detalleIdExp').textContent = `#EXP-${exp.id_cert}`;
+      document.getElementById('detalleCentro').textContent = exp.centro || 'San Juan de los Morros · Guárico';
+      document.getElementById('detalleFecha').textContent = exp.fecha || '2026-11-25';
+
+      const badge = document.getElementById('badgeEstatusActual');
+      badge.textContent = estatus;
+      badge.className = `badge ${claseBadgeEstatus(estatus)} px-3 py-2`;
+
+      const dosisLista = Array.isArray(exp.dosis) && exp.dosis.length > 0
+        ? exp.dosis
+        : [{ vacuna: 'Registro Clínico General', nro_dosis: 1, lote: 'N/A', fecha: exp.fecha || '-' }];
+
+      document.getElementById('cuerpoDosisExp').innerHTML = dosisLista.map((d) => `
+        <tr>
+          <td><strong>${d.vacuna}</strong></td>
+          <td>#${d.nro_dosis}</td>
+          <td class="font-monospace">${d.lote}</td>
+          <td>${d.fecha}</td>
+        </tr>
+      `).join('');
+
+      const soportesLista = Array.isArray(exp.soportes) && exp.soportes.length > 0
+        ? exp.soportes
+        : [{ tipo: 'Soporte Clínico', archivo: 'Serologia_Anticuerpos.pdf', origen: 'Centro de Salud', estado: 'Verificado' }];
+
+      document.getElementById('contenedorSoportesExp').innerHTML = soportesLista.map((s) => {
+        const qs = new URLSearchParams({
+          archivo: s.archivo,
+          tipo: s.tipo,
+          ciudadano: nombreCompleto,
+          cedula: exp.cedula || '',
+          estatus
+        }).toString();
+
+        return `
+          <div class="soporte-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <i class="fa-solid fa-file-pdf text-danger me-2"></i>
+              <strong>${s.archivo}</strong>
+              <small class="text-muted ms-2">(${s.tipo} · ${s.origen})</small>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-secondary">${s.estado}</span>
+              <a href="examenes_salud.html?${qs}" class="btn-estilo-actualizar sm">
+                <i class="fa-solid fa-eye me-1"></i>Ver Examen
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderHistorial() {
+      const cont = document.getElementById('historialDictamenes');
+      if (historialSesion.length === 0) {
+        cont.textContent = 'Aún no se han emitido dictámenes en esta sesión.';
+        return;
+      }
+
+      cont.innerHTML = '<ul class="list-group">' + historialSesion.map((h) => `
+        <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <div>
+            <strong>${h.ciudadano}</strong> (${h.cedula}) — <span>${h.observacion}</span>
+          </div>
+          <span class="badge ${claseBadgeEstatus(h.estatus)}">${h.estatus} · ${h.hora}</span>
+        </li>
+      `).join('') + '</ul>';
+    }
+
+    window.seleccionarExpediente = function(idCert) {
+      idSeleccionado = Number(idCert);
+      renderBandeja();
+      renderDetalleExpediente();
+    };
+
+    async function procesarDictamen(decision) {
+      const exp = expedientes.find((e) => Number(e.id_cert) === Number(idSeleccionado));
+      if (!exp) return;
+
+      const obs = textoDictamen.value.trim();
+      if (decision === 'rechazar' && !obs) {
+        mostrarAlerta('warning', 'Debe redactar una observación o motivo técnico antes de rechazar la solicitud.');
+        return;
+      }
+
+      const nuevoEstatus = decision === 'aprobar' ? 'Aprobado' : 'Rechazado';
+      const observacionFinal = obs || (
+        decision === 'aprobar'
+          ? 'Cumplimiento verificado y tarjeta digital certificada.'
+          : 'Documentación incompleta o pendiente por subsanación.'
+      );
+
+      try {
+        await fetch(`${API_URL}/certsalud/${exp.id_cert}/dictamen`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estatus: nuevoEstatus, observacion: observacionFinal })
+        });
+      } catch {
+        // Mantiene la actualización en la interfaz si el servidor está apagado
+      }
+
+      exp.estatus = nuevoEstatus;
+      exp.fecha = new Date().toISOString().slice(0, 10);
+
+      historialSesion.unshift({
+        ciudadano: `${exp.nombres} ${exp.apellidos}`.trim(),
+        cedula: exp.cedula,
+        estatus: nuevoEstatus,
+        observacion: observacionFinal,
+        hora: new Date().toLocaleTimeString('es-VE')
+      });
+
+      textoDictamen.value = '';
+      actualizarKPIs();
+      renderBandeja();
+      renderDetalleExpediente();
+      renderHistorial();
+      cambiarVentana('historial');
+
+      if (decision === 'aprobar') {
+        mostrarAlerta('success', '¡Promesa Aprobada! Tarjeta digital certificada y enviada al correo del ciudadano.');
+      } else {
+        mostrarAlerta('danger', 'Solicitud rechazada. Informe de faltantes registrado y enviado al correo.');
+      }
+    }
+
+    async function cargarExpedientes() {
+      try {
+        const res = await fetch(`${API_URL}/certsalud`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.ok && Array.isArray(data.data) && data.data.length > 0) {
+          expedientes = data.data.map((item, i) => ({
+            id_cert: item.id_cert || (200 + i),
+            id_personas: item.id_personas || (i + 1),
+            nombres: item.nombres || 'Ciudadano',
+            apellidos: item.apellidos || '',
+            cedula: item.cedula || 'S/C',
+            correo: item.correo || 'sin-correo@ejemplo.com',
+            centro: item.centro || 'Red Asistencial · Guárico',
+            fecha: item.fecha ? String(item.fecha).slice(0, 10) : '2026-11-25',
+            estatus: item.estatus || 'Pendiente',
+            dosis: Array.isArray(item.dosis) && item.dosis.length > 0
+              ? item.dosis
+              : [{ vacuna: 'Esquema Registrado', nro_dosis: 1, lote: 'L-VALIDADO', fecha: '2026-11-25' }],
+            soportes: Array.isArray(item.soportes) && item.soportes.length > 0
+              ? item.soportes
+              : [{ tipo: 'Soporte Clínico', archivo: item.nombre_archivo || 'Serologia_Anticuerpos.pdf', origen: 'Centro de Salud', estado: 'Verificado' }]
+          }));
+          idSeleccionado = expedientes[0].id_cert;
+        }
+      } catch {
+        // Conserva expedientes base operativos
+      }
+
+      actualizarKPIs();
+      renderBandeja();
+      renderDetalleExpediente();
+    }
+
+    document.querySelectorAll('[data-ventana]').forEach((btn) => {
+      btn.addEventListener('click', () => cambiarVentana(btn.dataset.ventana));
+    });
+
+    buscarExpediente.addEventListener('input', renderBandeja);
+    filtroEstatusExp.addEventListener('change', renderBandeja);
+
+    document.getElementById('btnLimpiarBandeja').addEventListener('click', () => {
+      buscarExpediente.value = '';
+      filtroEstatusExp.value = '';
+      renderBandeja();
+    });
+
+    document.getElementById('btnRefrescarTodo').addEventListener('click', cargarExpedientes);
+    document.getElementById('btnAprobarExpediente').addEventListener('click', () => procesarDictamen('aprobar'));
+    document.getElementById('btnRechazarExpediente').addEventListener('click', () => procesarDictamen('rechazar'));
+
+    actualizarKPIs();
+    renderBandeja();
+    renderDetalleExpediente();
+    cargarExpedientes();
+  </script>
 </body>
 </html>

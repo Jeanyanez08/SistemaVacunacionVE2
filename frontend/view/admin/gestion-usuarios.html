@@ -8,52 +8,428 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="../../css/styles.css">
   <link rel="stylesheet" href="../../css/responsive.css">
+  <style>
+    .gov-cam-accent {
+      border-top: 3px solid var(--turquesa-ciber);
+    }
+
+    /* Botones unificados al estilo sólido de "Actualizar" */
+    .btn-estilo-actualizar {
+      background: linear-gradient(135deg, var(--turquesa), #126572) !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      border-radius: 10px !important;
+      padding: 0.48rem 1rem !important;
+      border: none !important;
+      box-shadow: 0 4px 12px rgba(22, 125, 141, 0.28) !important;
+      transition: all 0.2s ease !important;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .btn-estilo-actualizar:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--sombra-glow) !important;
+      color: #ffffff !important;
+    }
+
+    .btn-estilo-actualizar.sm {
+      padding: 0.32rem 0.75rem !important;
+      font-size: 0.82rem !important;
+    }
+
+    .gov-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 25, 47, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 1050;
+    }
+
+    .gov-modal-backdrop.abierto {
+      display: flex;
+    }
+
+    .gov-modal-card {
+      background: var(--gris-tarjeta);
+      border: 2px solid var(--turquesa);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 580px;
+      padding: 1.75rem;
+      box-shadow: var(--sombra-hover);
+    }
+  </style>
 </head>
-<body>
-  <nav class="navbar navbar-dark navbar-institucional">
+<body class="gov-cam-accent">
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-institucional sticky-top">
     <div class="container-fluid px-4">
-      <span class="brand-text">GESTIÓN DE ACCESOS Y CREDENCIALES</span>
-      <a href="dashboard.html" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1"></i>Volver al Panel</a>
+      <a class="navbar-brand d-flex align-items-center" href="gestion-usuarios.html">
+        <i class="fa-solid fa-users-gear fa-2x me-3 text-info"></i>
+        <div>
+          <span class="brand-text">GESTIÓN DE ACCESOS Y CREDENCIALES</span>
+          <small class="brand-subtext">Administración de operadores, roles y centros asistenciales</small>
+        </div>
+      </a>
+
+      <div class="d-flex flex-wrap align-items-center gap-2 ms-auto mt-2 mt-lg-0">
+        <a href="dashboard.html" class="btn-estilo-actualizar">
+          <i class="fa-solid fa-arrow-left me-1"></i>Volver al Panel
+        </a>
+        <a href="bitacora.html" class="btn-estilo-actualizar">
+          <i class="fa-solid fa-user-secret me-1"></i>Bitácora
+        </a>
+      </div>
     </div>
   </nav>
 
-  <main class="container my-5">
-    <div class="card card-futurista p-4 p-md-5">
-      <h4 class="fw-bold text-azul mb-3"><i class="fa-solid fa-users-gear text-info me-2"></i>Control de Perfiles Autorizados</h4>
-      <p class="text-muted small mb-4">Administración de credenciales para los centros asistenciales y subregiones</p>
+  <main class="container-fluid px-lg-5 my-4">
+    <div id="alertaUsuario" class="alert d-none mb-4"></div>
 
-      <div class="table-responsive">
-        <table class="table table-custom align-middle">
-          <thead>
-            <tr>
-              <th>Usuario</th>
-              <th>Rol Institucional</th>
-              <th>Jurisdicción</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>operador_guarico</strong></td>
-              <td>Perfil 2 - Centro de Salud</td>
-              <td>Hospital Ranuárez Balza</td>
-              <td><span class="badge bg-success">Activo</span></td>
-              <td><button class="btn btn-sm btn-outline-primary">Editar Credenciales</button></td>
-            </tr>
-            <tr>
-              <td><strong>subregion_sanidad</strong></td>
-              <td>Perfil 3 - Subregión de Salud</td>
-              <td>San Juan de los Morros</td>
-              <td><span class="badge bg-success">Activo</span></td>
-              <td><button class="btn btn-sm btn-outline-primary">Editar Credenciales</button></td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="card card-futurista">
+      <div class="card-header-gob">
+        <h4 class="mb-0 fw-bold">
+          <i class="fa-solid fa-user-plus me-2"></i>Registrar Nuevo Usuario Institucional
+        </h4>
+        <small class="opacity-75">Asigne usuario, contraseña, rol y centro asistencial (si aplica)</small>
+      </div>
+
+      <div class="p-4 p-md-5">
+        <form id="formCrearUsuario" class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Usuario Institucional</label>
+            <input id="nuevoUsuario" type="text" class="form-control" placeholder="Ej. operador.guarico" required>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Contraseña</label>
+            <input id="nuevaClave" type="password" class="form-control" placeholder="Mínimo 4 caracteres" required>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Rol Institucional</label>
+            <select id="nuevoRol" class="form-select" required>
+              <option value="1">Perfil 1 · Master</option>
+              <option value="2" selected>Perfil 2 · Centro de Salud</option>
+              <option value="3">Perfil 3 · Subregión de Salud</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Centro Asistencial (Opcional)</label>
+            <select id="nuevoCentro" class="form-select">
+              <option value="">Sin centro asignado</option>
+            </select>
+          </div>
+
+          <div class="col-12">
+            <button type="submit" class="btn-estilo-actualizar">
+              <i class="fa-solid fa-floppy-disk me-2"></i>Crear Usuario
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card card-futurista">
+      <div class="card-header-gob d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h4 class="mb-0 fw-bold">
+            <i class="fa-solid fa-id-badge me-2"></i>Control de Perfiles Autorizados
+          </h4>
+          <small class="opacity-75">Edición de credenciales, cambio de contraseña y bajas de cuenta</small>
+        </div>
+
+        <input
+          id="buscarUsuario"
+          type="text"
+          class="form-control"
+          style="max-width: 280px;"
+          placeholder="Buscar usuario o rol..."
+        >
+      </div>
+
+      <div class="p-4 p-md-5">
+        <div class="table-responsive">
+          <table class="table table-custom align-middle mb-0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Usuario</th>
+                <th>Rol Institucional</th>
+                <th>Jurisdicción / Centro</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="cuerpoUsuarios">
+              <tr>
+                <td colspan="6" class="text-center text-muted">Cargando usuarios...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </main>
 
-  <footer>República Bolivariana de Venezuela · Sistema Nacional de Vacunación © 2026</footer>
+  <div id="modalEditarUsuario" class="gov-modal-backdrop" role="dialog" aria-modal="true">
+    <div class="gov-modal-card">
+      <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <h5 class="fw-bold text-azul mb-0">
+          <i class="fa-solid fa-key text-info me-2"></i>Editar Credenciales de Usuario
+        </h5>
+        <button id="btnCerrarModalUsr" type="button" class="btn-estilo-actualizar sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="formEditarUsuario" class="row g-3">
+        <input type="hidden" id="editIdUsuario">
+
+        <div class="col-md-6">
+          <label class="form-label">Nombre de Usuario</label>
+          <input id="editNombreUsuario" type="text" class="form-control" required>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Rol Institucional</label>
+          <select id="editIdRol" class="form-select" required>
+            <option value="1">Perfil 1 · Master</option>
+            <option value="2">Perfil 2 · Centro de Salud</option>
+            <option value="3">Perfil 3 · Subregión de Salud</option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Centro Asistencial</label>
+          <select id="editIdCentro" class="form-select">
+            <option value="">Sin centro asignado</option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Nueva Contraseña (Opcional)</label>
+          <input id="editNuevaClave" type="password" class="form-control" placeholder="Dejar vacía para mantener actual">
+        </div>
+
+        <div class="col-12 d-flex justify-content-end gap-2 mt-3">
+          <button id="btnCancelarModalUsr" type="button" class="btn-estilo-actualizar sm">Cancelar</button>
+          <button type="submit" class="btn-estilo-actualizar sm">Guardar Credenciales</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer>
+    República Bolivariana de Venezuela · Ministerio del Poder Popular para la Salud · Sistema Nacional de Vacunación © 2026
+  </footer>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+
+    let listaUsuarios = [];
+    let listaCentros = [];
+
+    const alertaUsuario = document.getElementById('alertaUsuario');
+    const cuerpoUsuarios = document.getElementById('cuerpoUsuarios');
+    const buscarUsuario = document.getElementById('buscarUsuario');
+    const nuevoCentro = document.getElementById('nuevoCentro');
+    const editIdCentro = document.getElementById('editIdCentro');
+    const modalEditarUsuario = document.getElementById('modalEditarUsuario');
+
+    function mostrarAlerta(tipo, texto) {
+      alertaUsuario.className = `alert alert-${tipo} mb-4`;
+      alertaUsuario.textContent = texto;
+    }
+
+    function poblarSelectsCentros() {
+      const opciones = '<option value="">Sin centro asignado</option>' +
+        listaCentros.map((c) => `<option value="${c.id_centros}">${c.nombre}</option>`).join('');
+      nuevoCentro.innerHTML = opciones;
+      editIdCentro.innerHTML = opciones;
+    }
+
+    function renderUsuarios() {
+      const texto = buscarUsuario.value.trim().toLowerCase();
+      const filtrados = listaUsuarios.filter((u) => {
+        if (!texto) return true;
+        const blob = `${u.id_usuario || ''} ${u.nombre_usuario || ''} ${u.nombre_rol || ''} ${u.nombre_centro || ''}`.toLowerCase();
+        return blob.includes(texto);
+      });
+
+      if (filtrados.length === 0) {
+        cuerpoUsuarios.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No hay usuarios para mostrar</td></tr>';
+        return;
+      }
+
+      cuerpoUsuarios.innerHTML = filtrados.map((u, idx) => `
+        <tr>
+          <td class="font-monospace text-muted">#${u.id_usuario ?? (idx + 1)}</td>
+          <td><strong>${u.nombre_usuario}</strong></td>
+          <td><span class="badge bg-info text-dark">${u.nombre_rol || `Rol ${u.id_rol}`}</span></td>
+          <td>${u.nombre_centro || 'Nivel Central / Sin asignar'}</td>
+          <td><span class="badge-vigente">Activo</span></td>
+          <td class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn-estilo-actualizar sm" onclick="abrirModalUsuario(${idx})">
+              <i class="fa-solid fa-key me-1"></i>Editar Credenciales
+            </button>
+            ${u.id_usuario ? `
+              <button type="button" class="btn-estilo-actualizar sm" onclick="eliminarUsuario(${u.id_usuario})">
+                <i class="fa-solid fa-trash me-1"></i>Eliminar
+              </button>
+            ` : ''}
+          </td>
+        </tr>
+      `).join('');
+
+      window.__usuariosMostrados = filtrados;
+    }
+
+    window.abrirModalUsuario = function(indice) {
+      const usr = (window.__usuariosMostrados || [])[indice];
+      if (!usr) return;
+      document.getElementById('editIdUsuario').value = usr.id_usuario || '';
+      document.getElementById('editNombreUsuario').value = usr.nombre_usuario || '';
+      document.getElementById('editIdRol').value = String(usr.id_rol || '2');
+      document.getElementById('editIdCentro').value = usr.id_centros ? String(usr.id_centros) : '';
+      document.getElementById('editNuevaClave').value = '';
+      modalEditarUsuario.classList.add('abierto');
+    };
+
+    function cerrarModalUsuario() {
+      modalEditarUsuario.classList.remove('abierto');
+    }
+
+    window.eliminarUsuario = async function(idUsuario) {
+      try {
+        const res = await fetch(`${API_URL}/usuarios/${idUsuario}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          mostrarAlerta('danger', data.mensaje || data.message || 'No se pudo eliminar el usuario');
+          return;
+        }
+        mostrarAlerta('success', data.mensaje || 'Usuario eliminado correctamente');
+        cargarUsuariosYCentros();
+      } catch {
+        mostrarAlerta('danger', 'Error de conexión al eliminar usuario');
+      }
+    };
+
+    document.getElementById('formCrearUsuario').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        nombre_usuario: document.getElementById('nuevoUsuario').value.trim(),
+        clave: document.getElementById('nuevaClave').value,
+        id_rol: Number(document.getElementById('nuevoRol').value),
+        id_centros: document.getElementById('nuevoCentro').value ? Number(document.getElementById('nuevoCentro').value) : null
+      };
+
+      try {
+        const res = await fetch(`${API_URL}/usuarios`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          mostrarAlerta('danger', data.mensaje || data.message || 'No se pudo crear el usuario');
+          return;
+        }
+        mostrarAlerta('success', data.mensaje || 'Usuario creado correctamente');
+        e.target.reset();
+        cargarUsuariosYCentros();
+      } catch {
+        mostrarAlerta('danger', 'Error de conexión al crear usuario');
+      }
+    });
+
+    document.getElementById('formEditarUsuario').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const idUsr = document.getElementById('editIdUsuario').value;
+      const nuevaClave = document.getElementById('editNuevaClave').value;
+
+      if (!idUsr) {
+        mostrarAlerta('warning', 'Conecte el backend en el puerto 5000 para guardar cambios en la base de datos.');
+        cerrarModalUsuario();
+        return;
+      }
+
+      const payload = {
+        nombre_usuario: document.getElementById('editNombreUsuario').value.trim(),
+        id_rol: Number(document.getElementById('editIdRol').value),
+        id_centros: document.getElementById('editIdCentro').value ? Number(document.getElementById('editIdCentro').value) : null
+      };
+
+      try {
+        const res = await fetch(`${API_URL}/usuarios/${idUsr}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          mostrarAlerta('danger', data.mensaje || data.message || 'No se pudo actualizar el usuario');
+          return;
+        }
+
+        if (nuevaClave.trim()) {
+          await fetch(`${API_URL}/usuarios/${idUsr}/clave`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clave: nuevaClave })
+          });
+        }
+
+        mostrarAlerta('success', 'Credenciales actualizadas correctamente');
+        cerrarModalUsuario();
+        cargarUsuariosYCentros();
+      } catch {
+        mostrarAlerta('danger', 'Error de conexión al actualizar credenciales');
+      }
+    });
+
+    async function cargarUsuariosYCentros() {
+      try {
+        const [rUsr, rCen] = await Promise.all([
+          fetch(`${API_URL}/usuarios`),
+          fetch(`${API_URL}/centros`)
+        ]);
+
+        const dUsr = await rUsr.json();
+        const dCen = await rCen.json();
+
+        listaCentros = Array.isArray(dCen.data) ? dCen.data : [];
+        poblarSelectsCentros();
+
+        if (dUsr.ok && Array.isArray(dUsr.data)) {
+          listaUsuarios = dUsr.data;
+        } else {
+          listaUsuarios = [];
+        }
+      } catch {
+        listaUsuarios = [
+          { nombre_usuario: 'operador_guarico', nombre_rol: 'Perfil 2 - Centro de Salud', nombre_centro: 'Hospital Ranuárez Balza' },
+          { nombre_usuario: 'subregion_sanidad', nombre_rol: 'Perfil 3 - Subregión de Salud', nombre_centro: 'San Juan de los Morros' }
+        ];
+      }
+      renderUsuarios();
+    }
+
+    buscarUsuario.addEventListener('input', renderUsuarios);
+    document.getElementById('btnCerrarModalUsr').addEventListener('click', cerrarModalUsuario);
+    document.getElementById('btnCancelarModalUsr').addEventListener('click', cerrarModalUsuario);
+    modalEditarUsuario.addEventListener('click', (e) => {
+      if (e.target === modalEditarUsuario) cerrarModalUsuario();
+    });
+
+    cargarUsuariosYCentros();
+  </script>
 </body>
 </html>

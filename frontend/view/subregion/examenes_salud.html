@@ -3,31 +3,420 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visor de Exámenes · Subregión</title>
+  <title>Visor de Exámenes Clínicos · Subregión</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="../../css/styles.css">
   <link rel="stylesheet" href="../../css/responsive.css">
+  <style>
+    .gov-cam-accent {
+      border-top: 3px solid var(--turquesa-ciber);
+    }
+
+    .visor-documento-box {
+      background: #0a192f;
+      color: #f1f5f9;
+      border: 1px solid var(--turquesa);
+      border-radius: 16px;
+      padding: 1.75rem;
+    }
+
+    .checklist-box {
+      background: #f8fafc;
+      border: 1px solid var(--linea-borde);
+      border-radius: 14px;
+      padding: 1.25rem;
+    }
+
+    /* Botones unificados al estilo sólido de "Actualizar" */
+    .btn-estilo-actualizar {
+      background: linear-gradient(135deg, var(--turquesa), #126572) !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      border-radius: 10px !important;
+      padding: 0.48rem 1rem !important;
+      border: none !important;
+      box-shadow: 0 4px 12px rgba(22, 125, 141, 0.28) !important;
+      transition: all 0.2s ease !important;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .btn-estilo-actualizar:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--sombra-glow) !important;
+      color: #ffffff !important;
+    }
+
+    .btn-estilo-actualizar.activo {
+      background: linear-gradient(135deg, var(--azul-gob), var(--turquesa)) !important;
+      outline: 2px solid var(--turquesa-ciber);
+    }
+
+    .btn-estilo-actualizar.sm {
+      padding: 0.32rem 0.75rem !important;
+      font-size: 0.82rem !important;
+    }
+  </style>
 </head>
-<body>
-  <nav class="navbar navbar-dark navbar-institucional">
-    <div class="container">
-      <span class="brand-text">VISOR DE SOPORTES Y EXÁMENES CLÍNICOS</span>
-      <a href="procesar_solicitud.html" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1"></i>Volver</a>
+<body class="gov-cam-accent">
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-institucional sticky-top">
+    <div class="container-fluid px-lg-5">
+      <a class="navbar-brand d-flex align-items-center" href="examenes_salud.html">
+        <i class="fa-solid fa-microscope fa-2x me-3 text-info"></i>
+        <div>
+          <span class="brand-text">VISOR DE EXÁMENES CLÍNICOS POR PACIENTE</span>
+          <small class="brand-subtext">Perfil 3 · Inspección de Soportes Anexados por Cédula o Expediente</small>
+        </div>
+      </a>
+
+      <div class="d-flex flex-wrap gap-2 ms-auto mt-2 mt-lg-0">
+        <button id="btnSincronizarAPI" type="button" class="btn-estilo-actualizar">
+          <i class="fa-solid fa-rotate me-1"></i>Actualizar
+        </button>
+        <button type="button" class="btn-estilo-actualizar" onclick="window.print()">
+          <i class="fa-solid fa-print me-1"></i>Imprimir
+        </button>
+        <a href="procesar_solicitud.html" class="btn-estilo-actualizar">
+          <i class="fa-solid fa-arrow-left me-1"></i>Volver al Expediente
+        </a>
+      </div>
     </div>
   </nav>
 
-  <main class="container my-5 text-center">
-    <div class="card card-futurista p-5 bg-dark text-white">
-      <i class="fa-solid fa-file-contract fa-5x text-info mb-3"></i>
-      <h3>Visualización de Documento Clínico Externo</h3>
-      <p class="text-muted">Certificado de anticuerpos verificado digitalmente para el expediente de la Subregión de Salud.</p>
-      <div class="mt-3">
-        <a href="procesar_solicitud.html" class="btn btn-turquesa">Regresar al Expediente</a>
+  <main class="container-fluid px-lg-5 my-4">
+    <div id="alertaExamen" class="alert d-none mb-4"></div>
+
+    <div class="row g-4">
+      <!-- Columna Izquierda: Buscar Exámenes por Persona y Seleccionar Documento -->
+      <div class="col-lg-4">
+        <div class="card card-futurista p-4">
+          <h5 class="fw-bold text-azul mb-3">
+            <i class="fa-solid fa-user-check text-info me-2"></i>Exámenes por Ciudadano
+          </h5>
+
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Filtrar por Cédula, Nombre o Archivo</label>
+            <input
+              id="inputFiltroPaciente"
+              type="text"
+              class="form-control"
+              placeholder="Ej. V-28123456 o nombre..."
+            >
+          </div>
+
+          <div id="listaExamenesPaciente" class="d-flex flex-column gap-2"></div>
+        </div>
+      </div>
+
+      <!-- Columna Derecha: Documento Seleccionado y Validación -->
+      <div class="col-lg-8">
+        <div class="card card-futurista p-4 p-md-5">
+          <!-- Estado cuando NO hay ningún examen seleccionado -->
+          <div id="sinSeleccionBox" class="text-center py-5">
+            <i class="fa-solid fa-file-magnifying-glass fa-3x text-info mb-3"></i>
+            <h5 class="fw-bold text-azul">Seleccione o busque un examen clínico</h5>
+            <p class="text-muted mb-0">
+              Elija un soporte de la lista lateral, busque una cédula o abra un examen directamente desde el expediente del ciudadano.
+            </p>
+          </div>
+
+          <!-- Estado cuando SÍ hay un examen seleccionado -->
+          <div id="detalleExamenBox" class="d-none">
+            <div class="visor-documento-box mb-4">
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <span class="badge bg-info text-dark px-3 py-2">
+                  <i class="fa-solid fa-file-contract me-1"></i>SOPORTE CLÍNICO DEL PACIENTE
+                </span>
+                <span id="badgeEstadoDoc" class="badge bg-warning text-dark px-3 py-2">En Revisión</span>
+              </div>
+
+              <div class="row g-3 mt-1">
+                <div class="col-md-4">
+                  <small class="text-secondary d-block">Ciudadano</small>
+                  <strong id="docCiudadano">-</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-secondary d-block">Cédula</small>
+                  <strong id="docCedula" class="font-monospace">-</strong>
+                </div>
+                <div class="col-md-4">
+                  <small class="text-secondary d-block">Tipo de Examen</small>
+                  <strong id="docTipo">-</strong>
+                </div>
+                <div class="col-md-6">
+                  <small class="text-secondary d-block">Archivo Adjunto</small>
+                  <span id="docArchivo" class="font-monospace text-info fw-bold">-</span>
+                </div>
+                <div class="col-md-6">
+                  <small class="text-secondary d-block">Ruta de Soporte</small>
+                  <span id="docRuta" class="font-monospace small text-light">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="checklist-box mb-4">
+              <h6 class="fw-bold text-azul mb-3">
+                <i class="fa-solid fa-list-check text-info me-2"></i>Verificación del Documento
+              </h6>
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <div class="form-check">
+                    <input id="chk1" class="form-check-input" type="checkbox" checked>
+                    <label class="form-check-label" for="chk1">Corresponde a la cédula del ciudadano</label>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check">
+                    <input id="chk2" class="form-check-input" type="checkbox" checked>
+                    <label class="form-check-label" for="chk2">Soporte legible y completo</label>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check">
+                    <input id="chk3" class="form-check-input" type="checkbox">
+                    <label class="form-check-label" for="chk3">Fecha y firma/sello verificados</label>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-check">
+                    <input id="chk4" class="form-check-input" type="checkbox">
+                    <label class="form-check-label" for="chk4">Apto para el expediente de Subregión</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Observación sobre este examen</label>
+              <textarea
+                id="obsExamen"
+                class="form-control"
+                rows="3"
+                placeholder="Escriba una nota técnica sobre este documento..."
+              ></textarea>
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div class="d-flex flex-wrap gap-2">
+                <button id="btnAprobarDoc" type="button" class="btn-estilo-actualizar">
+                  <i class="fa-solid fa-circle-check me-2"></i>Validar Examen
+                </button>
+                <button id="btnRechazarDoc" type="button" class="btn-estilo-actualizar">
+                  <i class="fa-solid fa-circle-xmark me-2"></i>Observar Examen
+                </button>
+              </div>
+
+              <a id="btnVolverExpediente" href="procesar_solicitud.html" class="btn-estilo-actualizar">
+                <i class="fa-solid fa-file-signature me-2"></i>Ir a Dictamen Final
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </main>
 
   <footer>República Bolivariana de Venezuela · Sistema Nacional de Vacunación © 2026</footer>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+
+    // Exámenes cargados por pacientes (se amplían al consultar /api/examenes o al venir desde un expediente)
+    let examenes = [
+      {
+        id_examenes: 1,
+        ciudadano: 'Paola Camaripano',
+        cedula: 'V-28.123.456',
+        tipo: 'Serología de Anticuerpos',
+        archivo: 'Serologia_Anticuerpos.pdf',
+        ruta: '/uploads/Serologia_Anticuerpos.pdf',
+        estado: 'En Revisión'
+      },
+      {
+        id_examenes: 2,
+        ciudadano: 'Carlos Mendoza',
+        cedula: 'V-24.980.114',
+        tipo: 'Informe de Exención Médica',
+        archivo: 'Informe_Exencion_Medica.pdf',
+        ruta: '/uploads/Informe_Exencion_Medica.pdf',
+        estado: 'En Revisión'
+      }
+    ];
+
+    let indiceSeleccionado = -1;
+
+    const inputFiltroPaciente = document.getElementById('inputFiltroPaciente');
+    const listaExamenesPaciente = document.getElementById('listaExamenesPaciente');
+    const alertaExamen = document.getElementById('alertaExamen');
+    const sinSeleccionBox = document.getElementById('sinSeleccionBox');
+    const detalleExamenBox = document.getElementById('detalleExamenBox');
+    const obsExamen = document.getElementById('obsExamen');
+
+    function mostrarAlerta(tipo, texto) {
+      alertaExamen.className = `alert alert-${tipo} mb-4`;
+      alertaExamen.innerHTML = `<i class="fa-solid fa-circle-info me-2"></i>${texto}`;
+    }
+
+    function claseBadge(estado) {
+      const e = String(estado || '').toLowerCase();
+      if (e.includes('valid') || e.includes('aprob')) return 'bg-success';
+      if (e.includes('observ') || e.includes('rechaz')) return 'bg-danger';
+      return 'bg-warning text-dark';
+    }
+
+    function renderLista() {
+      const q = inputFiltroPaciente.value.trim().toLowerCase();
+      const filtrados = examenes
+        .map((item, idx) => ({ item, idx }))
+        .filter(({ item }) => {
+          if (!q) return true;
+          const texto = `${item.ciudadano || ''} ${item.cedula || ''} ${item.archivo || ''} ${item.tipo || ''}`.toLowerCase();
+          return texto.includes(q);
+        });
+
+      if (filtrados.length === 0) {
+        listaExamenesPaciente.innerHTML = '<div class="text-center text-muted py-3 small">No se encontraron exámenes para ese filtro</div>';
+        return;
+      }
+
+      listaExamenesPaciente.innerHTML = filtrados.map(({ item, idx }) => `
+        <button
+          type="button"
+          class="btn-estilo-actualizar sm justify-content-between text-start ${idx === indiceSeleccionado ? 'activo' : ''}"
+          onclick="verExamenDeLista(${idx})"
+        >
+          <span class="text-truncate me-2">
+            <strong>${item.cedula || 'S/C'}</strong> · ${item.ciudadano || 'Ciudadano'} (${item.archivo})
+          </span>
+          <span class="badge ${claseBadge(item.estado)}">${item.estado}</span>
+        </button>
+      `).join('');
+    }
+
+    function renderDetalle() {
+      if (indiceSeleccionado < 0 || !examenes[indiceSeleccionado]) {
+        sinSeleccionBox.classList.remove('d-none');
+        detalleExamenBox.classList.add('d-none');
+        return;
+      }
+
+      const item = examenes[indiceSeleccionado];
+      sinSeleccionBox.classList.add('d-none');
+      detalleExamenBox.classList.remove('d-none');
+
+      document.getElementById('docCiudadano').textContent = item.ciudadano || '-';
+      document.getElementById('docCedula').textContent = item.cedula || '-';
+      document.getElementById('docTipo').textContent = item.tipo || 'Soporte Clínico';
+      document.getElementById('docArchivo').textContent = item.archivo || '-';
+      document.getElementById('docRuta').textContent = item.ruta || `/uploads/${item.archivo || ''}`;
+
+      const badge = document.getElementById('badgeEstadoDoc');
+      badge.textContent = item.estado || 'En Revisión';
+      badge.className = `badge ${claseBadge(item.estado)} px-3 py-2`;
+
+      const qs = new URLSearchParams({
+        archivo: item.archivo || '',
+        ciudadano: item.ciudadano || '',
+        cedula: item.cedula || ''
+      }).toString();
+      document.getElementById('btnVolverExpediente').href = `procesar_solicitud.html?${qs}`;
+    }
+
+    window.verExamenDeLista = function(idx) {
+      indiceSeleccionado = idx;
+      renderLista();
+      renderDetalle();
+    };
+
+    async function actualizarEstadoExamen(nuevoEstado) {
+      if (indiceSeleccionado < 0 || !examenes[indiceSeleccionado]) return;
+      const item = examenes[indiceSeleccionado];
+      const nota = obsExamen.value.trim();
+
+      if (nuevoEstado === 'Observado' && !nota) {
+        mostrarAlerta('warning', 'Escriba una observación antes de marcar el examen como observado.');
+        return;
+      }
+
+      item.estado = nuevoEstado;
+      renderLista();
+      renderDetalle();
+
+      try {
+        if (item.id_examenes) {
+          await fetch(`${API_URL}/examenes/dictamen/${item.id_examenes}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              estado_revision: nuevoEstado,
+              observacion: nota || `Examen marcado como ${nuevoEstado}`
+            })
+          });
+        }
+      } catch {
+        // Si el servidor no está activo, se mantiene el cambio en la interfaz
+      }
+
+      obsExamen.value = '';
+      mostrarAlerta(
+        nuevoEstado === 'Validado' ? 'success' : 'danger',
+        `Examen "${item.archivo}" de ${item.ciudadano} (${item.cedula}) marcado como ${nuevoEstado}.`
+      );
+    }
+
+    async function sincronizarExamenes() {
+      try {
+        const res = await fetch(`${API_URL}/examenes`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.ok && Array.isArray(data.data) && data.data.length > 0) {
+          examenes = data.data.map((ex, i) => ({
+            id_examenes: ex.id_examenes || (i + 10),
+            ciudadano: `${ex.nombres || ''} ${ex.apellidos || ''}`.trim() || 'Ciudadano',
+            cedula: ex.cedula || 'S/C',
+            tipo: ex.tipo_examen || 'Soporte Clínico Externo',
+            archivo: ex.nombre_archivo || 'soporte_clinico.pdf',
+            ruta: ex.ruta_archivo || `/uploads/${ex.nombre_archivo || 'soporte_clinico.pdf'}`,
+            estado: ex.estado_revision || 'En Revisión'
+          }));
+          indiceSeleccionado = 0;
+          renderLista();
+          renderDetalle();
+          mostrarAlerta('success', 'Exámenes actualizados desde /api/examenes.');
+          return;
+        }
+        mostrarAlerta('info', 'No hay registros adicionales en /api/examenes.');
+      } catch {
+        mostrarAlerta('warning', 'Servidor 5000 no disponible; se muestra la lista local de exámenes.');
+      }
+    }
+
+    // Si llega un examen específico desde procesar_solicitud.html, lo selecciona automáticamente
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('archivo') || params.get('ciudadano') || params.get('cedula')) {
+      examenes.unshift({
+        id_examenes: null,
+        ciudadano: params.get('ciudadano') || 'Ciudadano',
+        cedula: params.get('cedula') || 'S/C',
+        tipo: params.get('tipo') || 'Soporte Clínico',
+        archivo: params.get('archivo') || 'documento.pdf',
+        ruta: `/uploads/${params.get('archivo') || 'documento.pdf'}`,
+        estado: params.get('estatus') || 'En Revisión'
+      });
+      indiceSeleccionado = 0;
+    }
+
+    inputFiltroPaciente.addEventListener('input', renderLista);
+    document.getElementById('btnSincronizarAPI').addEventListener('click', sincronizarExamenes);
+    document.getElementById('btnAprobarDoc').addEventListener('click', () => actualizarEstadoExamen('Validado'));
+    document.getElementById('btnRechazarDoc').addEventListener('click', () => actualizarEstadoExamen('Observado'));
+
+    renderLista();
+    renderDetalle();
+  </script>
 </body>
 </html>

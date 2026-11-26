@@ -3,60 +3,519 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bitácora de Auditoría · Master</title>
+  <title>Bitácora de Auditoría · Control Institucional</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <link rel="stylesheet" href="../../css/styles.css">
   <link rel="stylesheet" href="../../css/responsive.css">
+  <style>
+    .gov-cam-accent {
+      border-top: 3px solid var(--turquesa-ciber);
+    }
+
+    .cam-monitor-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      font-family: Consolas, monospace;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      background: rgba(10, 25, 47, 0.08);
+      color: var(--azul-gob);
+      border: 1px solid rgba(22, 125, 141, 0.35);
+    }
+
+    .cam-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--turquesa-ciber);
+      box-shadow: 0 0 8px var(--turquesa-ciber);
+    }
+
+    .audit-stat {
+      background: var(--gris-tarjeta);
+      border: 1px solid var(--linea-borde);
+      border-radius: 14px;
+      padding: 1rem 1.2rem;
+      box-shadow: var(--sombra-card);
+    }
+
+    .audit-stat-num {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: var(--azul-gob);
+      font-family: Consolas, monospace;
+    }
+
+    .audit-console-wrap {
+      background: #0a192f;
+      border: 1px solid var(--turquesa);
+      border-radius: 16px;
+      padding: 1rem;
+      box-shadow: var(--sombra-card);
+    }
+
+    .audit-table {
+      background: #0d1d36;
+      color: #f1f5f9;
+      margin-bottom: 0;
+    }
+
+    .audit-table thead th {
+      background: #163a5a;
+      color: var(--turquesa-ciber);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 2px solid var(--turquesa);
+      padding: 0.9rem 1rem;
+    }
+
+    .audit-table tbody td {
+      border-color: rgba(148, 163, 184, 0.16);
+      padding: 0.85rem 1rem;
+      vertical-align: middle;
+      font-size: 0.9rem;
+    }
+
+    .audit-table tbody tr:hover td {
+      background: rgba(0, 242, 254, 0.06);
+    }
+
+    /* Botones unificados al estilo sólido de "Actualizar" */
+    .btn-estilo-actualizar {
+      background: linear-gradient(135deg, var(--turquesa), #126572) !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      border-radius: 10px !important;
+      padding: 0.48rem 1rem !important;
+      border: none !important;
+      box-shadow: 0 4px 12px rgba(22, 125, 141, 0.28) !important;
+      transition: all 0.2s ease !important;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .btn-estilo-actualizar:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--sombra-glow) !important;
+      color: #ffffff !important;
+    }
+
+    .btn-estilo-actualizar.activo {
+      background: linear-gradient(135deg, var(--azul-gob), var(--turquesa)) !important;
+      outline: 2px solid var(--turquesa-ciber);
+    }
+
+    .btn-estilo-actualizar.sm {
+      padding: 0.32rem 0.75rem !important;
+      font-size: 0.82rem !important;
+    }
+
+    .gov-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 25, 47, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      z-index: 1050;
+    }
+
+    .gov-modal-backdrop.abierto {
+      display: flex;
+    }
+
+    .gov-modal-card {
+      background: var(--gris-tarjeta);
+      border: 2px solid var(--turquesa);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 640px;
+      padding: 1.75rem;
+      box-shadow: var(--sombra-hover);
+    }
+
+    .detalle-tecnico {
+      background: #0a192f;
+      color: #e2e8f0;
+      border-radius: 12px;
+      padding: 1rem;
+      font-family: Consolas, monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+  </style>
 </head>
-<body>
-  <nav class="navbar navbar-dark navbar-institucional">
+<body class="gov-cam-accent">
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-institucional sticky-top">
     <div class="container-fluid px-4">
-      <span class="brand-text">BITÁCORA Y AUDITORÍA DEL SISTEMA ("Cámara Escondida")</span>
-      <a href="dashboard.html" class="btn btn-outline-light btn-sm"><i class="fa-solid fa-arrow-left me-1"></i>Volver al Panel</a>
+      <a class="navbar-brand d-flex align-items-center" href="bitacora.html">
+        <i class="fa-solid fa-user-secret fa-2x me-3 text-info"></i>
+        <div>
+          <span class="brand-text">BITÁCORA Y AUDITORÍA DEL SISTEMA ("Cámara Escondida")</span>
+          <small class="brand-subtext">Trazabilidad operativa, control de cambios y supervisión institucional</small>
+        </div>
+      </a>
+
+      <div class="d-flex flex-wrap align-items-center gap-2 ms-auto mt-2 mt-lg-0">
+        <button id="btnAutoRefresh" type="button" class="btn-estilo-actualizar">
+          <i class="fa-solid fa-tower-broadcast me-1"></i>Auto-Monitoreo: OFF
+        </button>
+        <button id="btnActualizarLogs" type="button" class="btn-estilo-actualizar">
+          <i class="fa-solid fa-rotate me-1"></i>Actualizar
+        </button>
+        <a href="gestion-usuarios.html" class="btn-estilo-actualizar">
+          <i class="fa-solid fa-users me-1"></i>Usuarios
+        </a>
+        <a href="dashboard.html" class="btn-estilo-actualizar">
+          <i class="fa-solid fa-arrow-left me-1"></i>Volver al Panel
+        </a>
+      </div>
     </div>
   </nav>
 
-  <main class="container my-5">
-    <div class="card card-futurista p-4 p-md-5">
-      <h4 class="fw-bold text-azul mb-3"><i class="fa-solid fa-user-secret text-danger me-2"></i>Registro Inalterable de Operaciones CRUD</h4>
-      <p class="text-muted small mb-4">Trazabilidad detallada de acciones efectuadas por los operadores en todo el país</p>
+  <main class="container-fluid px-lg-5 my-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+      <div id="estadoMonitor" class="cam-monitor-pill">
+        <span class="cam-pulse"></span>
+        <span>CAM-SEC // SINCRONIZANDO CON /api/logs...</span>
+      </div>
+      <small id="ultimaActualizacion" class="text-muted fw-semibold">Última lectura: --:--:--</small>
+    </div>
 
-      <div class="table-responsive">
-        <table class="table table-dark table-striped align-middle rounded overflow-hidden">
-          <thead>
-            <tr class="text-info">
-              <th>ID Log</th>
-              <th>Usuario</th>
-              <th>Perfil</th>
-              <th>Fecha / Hora</th>
-              <th>Acción CRUD</th>
-              <th>Detalle de Operación</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="font-monospace text-muted">#LOG-8492</td>
-              <td>admin_master</td>
-              <td><span class="badge bg-primary">Master</span></td>
-              <td>22/10/2026 10:42 PM</td>
-              <td><span class="badge bg-danger">DELETE</span></td>
-              <td>Depuración de registro duplicado cédula V-18.492.102</td>
-            </tr>
-            <tr>
-              <td class="font-monospace text-muted">#LOG-8491</td>
-              <td>operador_guarico</td>
-              <td><span class="badge bg-info text-dark">Centro Salud</span></td>
-              <td>22/10/2026 09:15 PM</td>
-              <td><span class="badge bg-success">CREATE</span></td>
-              <td>Carga de dosis Pentavalente Lote L-5120</td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-xl-3">
+        <div class="audit-stat">
+          <small class="text-muted fw-bold text-uppercase">Eventos Registrados</small>
+          <div id="statTotalLogs" class="audit-stat-num">0</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="audit-stat">
+          <small class="text-muted fw-bold text-uppercase">Altas / Registros</small>
+          <div id="statAltas" class="audit-stat-num text-success">0</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="audit-stat">
+          <small class="text-muted fw-bold text-uppercase">Modificaciones / Dictámenes</small>
+          <div id="statCambios" class="audit-stat-num text-warning">0</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl-3">
+        <div class="audit-stat">
+          <small class="text-muted fw-bold text-uppercase">Eliminaciones</small>
+          <div id="statBajas" class="audit-stat-num text-danger">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-futurista">
+      <div class="card-header-gob d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+          <h4 class="mb-0 fw-bold">
+            <i class="fa-solid fa-shield-halved me-2"></i>Registro Inalterable de Operaciones CRUD
+          </h4>
+          <small class="opacity-75">Consulta filtrada por acción, módulo/tabla y palabra clave</small>
+        </div>
+        <button id="btnLimpiarFiltrosLogs" type="button" class="btn-estilo-actualizar sm">
+          <i class="fa-solid fa-filter-circle-xmark me-1"></i>Limpiar Filtros
+        </button>
+      </div>
+
+      <div class="p-4 p-md-5">
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <label class="form-label">Acción CRUD</label>
+            <select id="filtroAccion" class="form-select">
+              <option value="">Todas las acciones</option>
+              <option value="INSERT">INSERT / CREATE</option>
+              <option value="UPDATE">UPDATE / EDITAR</option>
+              <option value="DELETE">DELETE / ELIMINAR</option>
+              <option value="APROBAR">APROBAR / DICTAMEN</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Tabla Afectada</label>
+            <select id="filtroTabla" class="form-select">
+              <option value="">Todas las tablas</option>
+              <option value="personas">personas</option>
+              <option value="registrodosis">registrodosis</option>
+              <option value="examenes">examenes</option>
+              <option value="certsalud">certsalud</option>
+              <option value="lote_vacuna">lote_vacuna</option>
+              <option value="centros">centros</option>
+              <option value="usuario">usuario</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Búsqueda Instantánea</label>
+            <input
+              id="filtroBusqueda"
+              type="text"
+              class="form-control"
+              placeholder="Buscar por usuario, rol, cédula o detalle de operación..."
+            >
+          </div>
+        </div>
+
+        <div class="audit-console-wrap">
+          <div class="table-responsive">
+            <table class="table audit-table align-middle">
+              <thead>
+                <tr>
+                  <th>ID Log</th>
+                  <th>Usuario</th>
+                  <th>Perfil</th>
+                  <th>Fecha / Hora</th>
+                  <th>Acción CRUD</th>
+                  <th>Tabla</th>
+                  <th>Detalle de Operación</th>
+                  <th>Inspección</th>
+                </tr>
+              </thead>
+              <tbody id="cuerpoBitacora">
+                <tr>
+                  <td colspan="8" class="text-center text-secondary">Cargando eventos de auditoría...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </main>
 
-  <footer>República Bolivariana de Venezuela · Sistema Nacional de Vacunación © 2026</footer>
+  <div id="modalDetalleLog" class="gov-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="tituloModalLog">
+    <div class="gov-modal-card">
+      <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+        <h5 id="tituloModalLog" class="fw-bold text-azul mb-0">
+          <i class="fa-solid fa-magnifying-glass-chart text-info me-2"></i>Inspección Detallada de Evento
+        </h5>
+        <button id="btnCerrarModalLog" type="button" class="btn-estilo-actualizar sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div id="contenidoDetalleLog" class="detalle-tecnico mb-3"></div>
+
+      <div class="text-end">
+        <button id="btnAceptarModalLog" type="button" class="btn-estilo-actualizar">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    República Bolivariana de Venezuela · Ministerio del Poder Popular para la Salud · Sistema Nacional de Vacunación © 2026
+  </footer>
+
+  <script>
+    const API_URL = 'http://localhost:5000/api';
+
+    const logsRespaldo = [
+      {
+        id_log: 8492,
+        nombre_usuario: 'admin_master',
+        nombre_rol: 'Master',
+        fecha_hora: '2026-10-22 22:42:00',
+        accion: 'DELETE',
+        tabla_afectada: 'personas',
+        descripcion_detalle: 'Depuración de registro duplicado cédula V-18.492.102'
+      },
+      {
+        id_log: 8491,
+        nombre_usuario: 'operador_guarico',
+        nombre_rol: 'Centro Salud',
+        fecha_hora: '2026-10-22 21:15:00',
+        accion: 'INSERT',
+        tabla_afectada: 'registrodosis',
+        descripcion_detalle: 'Carga de dosis Pentavalente Lote L-5120'
+      }
+    ];
+
+    let eventosLogs = [];
+    let timerAuto = null;
+
+    const filtroAccion = document.getElementById('filtroAccion');
+    const filtroTabla = document.getElementById('filtroTabla');
+    const filtroBusqueda = document.getElementById('filtroBusqueda');
+    const cuerpoBitacora = document.getElementById('cuerpoBitacora');
+    const estadoMonitor = document.getElementById('estadoMonitor');
+    const ultimaActualizacion = document.getElementById('ultimaActualizacion');
+    const modalDetalleLog = document.getElementById('modalDetalleLog');
+    const contenidoDetalleLog = document.getElementById('contenidoDetalleLog');
+
+    function badgeAccionHTML(accion) {
+      const a = String(accion || '').toUpperCase();
+      if (a === 'DELETE' || a === 'ELIMINAR') {
+        return `<span class="badge bg-danger">${a}</span>`;
+      }
+      if (a === 'UPDATE' || a === 'EDITAR') {
+        return `<span class="badge bg-warning text-dark">${a}</span>`;
+      }
+      if (a === 'APROBAR' || a === 'DICTAMEN') {
+        return `<span class="badge bg-info text-dark">${a}</span>`;
+      }
+      return `<span class="badge bg-success">${a || 'INSERT'}</span>`;
+    }
+
+    function badgeRolHTML(rol) {
+      const r = String(rol || 'Operador');
+      if (r.toLowerCase().includes('master')) {
+        return `<span class="badge bg-primary">${r}</span>`;
+      }
+      if (r.toLowerCase().includes('subreg')) {
+        return `<span class="badge bg-secondary">${r}</span>`;
+      }
+      return `<span class="badge bg-info text-dark">${r}</span>`;
+    }
+
+    function actualizarEstadisticas(lista) {
+      const total = lista.length;
+      const altas = lista.filter((l) => ['INSERT', 'CREATE'].includes(String(l.accion || '').toUpperCase())).length;
+      const cambios = lista.filter((l) => ['UPDATE', 'EDITAR', 'APROBAR', 'DICTAMEN'].includes(String(l.accion || '').toUpperCase())).length;
+      const bajas = lista.filter((l) => ['DELETE', 'ELIMINAR'].includes(String(l.accion || '').toUpperCase())).length;
+
+      document.getElementById('statTotalLogs').textContent = total.toLocaleString('es-VE');
+      document.getElementById('statAltas').textContent = altas.toLocaleString('es-VE');
+      document.getElementById('statCambios').textContent = cambios.toLocaleString('es-VE');
+      document.getElementById('statBajas').textContent = bajas.toLocaleString('es-VE');
+    }
+
+    function renderBitacora() {
+      const accSel = filtroAccion.value.trim().toUpperCase();
+      const tabSel = filtroTabla.value.trim().toLowerCase();
+      const texto = filtroBusqueda.value.trim().toLowerCase();
+
+      const filtrados = eventosLogs.filter((item) => {
+        const accionItem = String(item.accion || '').toUpperCase();
+        const tablaItem = String(item.tabla_afectada || '').toLowerCase();
+
+        if (accSel) {
+          if (accSel === 'INSERT' && !['INSERT', 'CREATE'].includes(accionItem)) return false;
+          if (accSel === 'UPDATE' && !['UPDATE', 'EDITAR'].includes(accionItem)) return false;
+          if (accSel === 'DELETE' && !['DELETE', 'ELIMINAR'].includes(accionItem)) return false;
+          if (accSel === 'APROBAR' && !['APROBAR', 'DICTAMEN'].includes(accionItem)) return false;
+        }
+
+        if (tabSel && tablaItem !== tabSel) return false;
+
+        if (texto) {
+          const blob = `${item.id_log || ''} ${item.nombre_usuario || ''} ${item.nombre_rol || ''} ${item.accion || ''} ${item.tabla_afectada || ''} ${item.descripcion_detalle || ''}`.toLowerCase();
+          if (!blob.includes(texto)) return false;
+        }
+
+        return true;
+      });
+
+      actualizarEstadisticas(filtrados);
+
+      if (filtrados.length === 0) {
+        cuerpoBitacora.innerHTML = '<tr><td colspan="8" class="text-center text-secondary">No hay eventos que coincidan con los filtros</td></tr>';
+        return;
+      }
+
+      cuerpoBitacora.innerHTML = filtrados.map((item, idx) => {
+        const fechaFormateada = String(item.fecha_hora || '').slice(0, 19).replace('T', ' ') || '-';
+        return `
+          <tr>
+            <td class="font-monospace text-info">#LOG-${item.id_log ?? (idx + 1)}</td>
+            <td><strong>${item.nombre_usuario || `Usuario #${item.id_usuario || '-'}`}</strong></td>
+            <td>${badgeRolHTML(item.nombre_rol)}</td>
+            <td class="font-monospace small">${fechaFormateada}</td>
+            <td>${badgeAccionHTML(item.accion)}</td>
+            <td class="font-monospace">${item.tabla_afectada || '-'}</td>
+            <td>${item.descripcion_detalle || '-'}</td>
+            <td>
+              <button
+                type="button"
+                class="btn-estilo-actualizar sm"
+                onclick="abrirInspeccion(${idx})"
+              >
+                <i class="fa-solid fa-eye me-1"></i>Ver
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      window.__logsFiltradosActuales = filtrados;
+    }
+
+    window.abrirInspeccion = function(indice) {
+      const registro = (window.__logsFiltradosActuales || [])[indice];
+      if (!registro) return;
+      contenidoDetalleLog.textContent = JSON.stringify(registro, null, 2);
+      modalDetalleLog.classList.add('abierto');
+    };
+
+    function cerrarModalLog() {
+      modalDetalleLog.classList.remove('abierto');
+    }
+
+    async function cargarBitacora() {
+      try {
+        const res = await fetch(`${API_URL}/logs?limite=200`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        eventosLogs = Array.isArray(data.data) ? data.data : [];
+        estadoMonitor.innerHTML = '<span class="cam-pulse"></span><span>CAM-SEC // ENLACE ACTIVO CON /api/logs</span>';
+      } catch {
+        eventosLogs = logsRespaldo;
+        estadoMonitor.innerHTML = '<span class="cam-pulse"></span><span>CAM-SEC // MODO REFERENCIA (SERVIDOR 5000 INACTIVO)</span>';
+      }
+
+      const ahora = new Date().toLocaleTimeString('es-VE');
+      ultimaActualizacion.textContent = `Última lectura: ${ahora}`;
+      renderBitacora();
+    }
+
+    filtroAccion.addEventListener('change', renderBitacora);
+    filtroTabla.addEventListener('change', renderBitacora);
+    filtroBusqueda.addEventListener('input', renderBitacora);
+
+    document.getElementById('btnLimpiarFiltrosLogs').addEventListener('click', () => {
+      filtroAccion.value = '';
+      filtroTabla.value = '';
+      filtroBusqueda.value = '';
+      renderBitacora();
+    });
+
+    document.getElementById('btnActualizarLogs').addEventListener('click', cargarBitacora);
+
+    document.getElementById('btnAutoRefresh').addEventListener('click', function() {
+      if (timerAuto) {
+        clearInterval(timerAuto);
+        timerAuto = null;
+        this.classList.remove('activo');
+        this.innerHTML = '<i class="fa-solid fa-tower-broadcast me-1"></i>Auto-Monitoreo: OFF';
+      } else {
+        timerAuto = setInterval(cargarBitacora, 10000);
+        this.classList.add('activo');
+        this.innerHTML = '<i class="fa-solid fa-tower-broadcast me-1"></i>Auto-Monitoreo: ON (10s)';
+        cargarBitacora();
+      }
+    });
+
+    document.getElementById('btnCerrarModalLog').addEventListener('click', cerrarModalLog);
+    document.getElementById('btnAceptarModalLog').addEventListener('click', cerrarModalLog);
+    modalDetalleLog.addEventListener('click', (e) => {
+      if (e.target === modalDetalleLog) cerrarModalLog();
+    });
+
+    cargarBitacora();
+  </script>
 </body>
 </html>
